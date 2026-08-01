@@ -36,15 +36,23 @@ private def nl (t : Text) : Text := t ++ Text.plain "\n"
 
 /-- Two-column rows, aligned on display width, wrapped to `width`.
 
-Uses `Layout.columns`, which wraps each cell *before* aligning, so a description longer
-than its column continues underneath itself instead of under the flag name. -/
+Only the label column is padded. `Layout.columns` would be shorter, but it aligns *every*
+column including the last, which leaves trailing spaces on every help line. Splitting the
+wrapped description with `Layout.splitLines` and indenting the continuation lines by hand
+gives the same alignment with no trailing whitespace. -/
 private def rows (width : Nat) (items : List (Text × Text)) : Text :=
   if items.isEmpty then Text.plain "" else
   let labelWidth := items.foldl (fun acc it => max acc it.1.width) 0
   let gap := 2
   let descWidth := if width > labelWidth + gap + 4 then width - labelWidth - gap else 20
+  let indent := Text.plain (String.mk (List.replicate (labelWidth + gap) ' '))
+  let sep := Text.plain (String.mk (List.replicate gap ' '))
   Layout.joinLines (items.map fun (label, desc) =>
-    Layout.columns [labelWidth, descWidth] gap [label, desc])
+    match Layout.splitLines (Layout.wrapLines descWidth desc) with
+    | [] => Layout.padRight labelWidth label
+    | first :: rest =>
+      Layout.joinLines
+        ((Layout.padRight labelWidth label ++ sep ++ first) :: rest.map (indent ++ ·)))
     ++ Text.plain "\n"
 
 private def block (title : String) (body : Text) : Text :=

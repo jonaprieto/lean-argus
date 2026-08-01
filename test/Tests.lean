@@ -152,10 +152,35 @@ private def messageChecks : List (Option String) :=
       ((firstErr ["--zzzzzzz=2", "needle", "--jobs=1"]).endsWith "unknown flag '--zzzzzzz=2'")
   ]
 
+/-! ### Help rendering -/
+
+private def longCmd :=
+  Argus.cmd "demo"
+    (Spec.map (fun (b : Bool) => b)
+      (Spec.switch "verbose" (some 'v')
+        "Emit a great deal of additional detail about every step being taken"))
+    (description := "d")
+
+/-- Rendered at 40 columns, the description must wrap, continuation lines must be
+indented under the description column, and no line may carry trailing whitespace. -/
+private def helpChecks : List (Option String) :=
+  let lines := (Help.render longCmd 40).plainText.splitOn "\n"
+  let flagLines := lines.filter (fun l => (l.splitOn "--verbose").length > 1)
+  let contLines := lines.filter (fun l => (l.splitOn "detail").length > 1)
+  [ check "no line has trailing whitespace"
+      (lines.all fun l => !l.endsWith " ")
+  , check "the long description wraps onto more than one line"
+      (flagLines.length == 1 && contLines.length == 1 && flagLines != contLines)
+  , check "continuation lines are indented, not flush left"
+      (contLines.all fun l => l.startsWith "  ")
+  , check "no rendered line exceeds the requested width"
+      (lines.all fun l => l.length <= 40)
+  ]
+
 def main : IO UInt32 := do
   let results :=
     paramChecks ++ [errorPositionCheck] ++ editDistanceChecks ++ metaChecks
-      ++ runnerChecks ++ messageChecks
+      ++ runnerChecks ++ messageChecks ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then
     IO.println s!"all {results.length} checks passed"

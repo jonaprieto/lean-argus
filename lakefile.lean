@@ -15,7 +15,7 @@ require «termcolor» from git
 
 require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
-  @ "7c627ca1785694d634baaf1ac3ea33a106902d87"
+  @ "b4cebaf65c8cb3a58b97acaeadf1b8aae275c19b"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
