@@ -5,6 +5,7 @@ Authors: Jonathan Cubides
 -/
 
 import Argus
+import Argus.Term
 
 /-!
 # argus demo
@@ -44,29 +45,13 @@ private def rule (title : String) : IO Unit := do
   IO.println s!"───── {title} ─────"
 
 def main (argv : List String) : IO UInt32 := do
-  -- Completion scripts are emitted before parsing: a shell asking for them should not
-  -- have to satisfy the command's required flags.
-  match argv with
-  | ["--completions", shell] =>
-    match shell with
-    | "bash" => IO.print (Completions.bash grepish); return 0
-    | "zsh" => IO.print (Completions.zsh grepish); return 0
-    | "fish" => IO.print (Completions.fish grepish); return 0
-    | other =>
-      IO.eprintln s!"grepish: unknown shell '{other}' (want bash, zsh, or fish)"
-      return 2
-  | _ => pure ()
-
-  -- With arguments, behave like the real tool: parse and report.
+  -- With arguments, `Argus.Term.main` is the whole entry point: it handles --help,
+  -- --version, and --completions SHELL before parsing, reports every error to stderr at
+  -- the real terminal width, and picks a color target from the environment.
   if !argv.isEmpty then
-    match grepish.run argv with
-    | .ok o =>
-      IO.println (repr o)
+    return ← Term.main grepish argv fun opts => do
+      IO.println (repr opts)
       return 0
-    | .error errs =>
-      IO.eprint (Text.render RenderTarget.ansi16 (Help.renderErrors errs))
-      IO.eprint (Text.render RenderTarget.ansi16 (Help.render grepish))
-      return 2
 
   -- With none, show what one Command value produces.
   rule "COLORED HELP"

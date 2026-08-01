@@ -34,15 +34,18 @@ private def flagStyle : Style := Style.bold <+> Style.green
 
 private def nl (t : Text) : Text := t ++ Text.plain "\n"
 
-/-- Two-column rows, aligned on display width, wrapped to `width`. -/
+/-- Two-column rows, aligned on display width, wrapped to `width`.
+
+Uses `Layout.columns`, which wraps each cell *before* aligning, so a description longer
+than its column continues underneath itself instead of under the flag name. -/
 private def rows (width : Nat) (items : List (Text × Text)) : Text :=
   if items.isEmpty then Text.plain "" else
   let labelWidth := items.foldl (fun acc it => max acc it.1.width) 0
   let gap := 2
   let descWidth := if width > labelWidth + gap + 4 then width - labelWidth - gap else 20
-  Text.concat <| items.map fun (label, desc) =>
-    let wrapped := Layout.wrapLines descWidth desc
-    nl (Layout.padRight labelWidth label ++ Text.plain "  " ++ wrapped)
+  Layout.joinLines (items.map fun (label, desc) =>
+    Layout.columns [labelWidth, descWidth] gap [label, desc])
+    ++ Text.plain "\n"
 
 private def block (title : String) (body : Text) : Text :=
   if body.plainText.isEmpty then Text.plain ""

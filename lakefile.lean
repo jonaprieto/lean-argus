@@ -17,9 +17,23 @@ require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
   @ "7c627ca1785694d634baaf1ac3ea33a106902d87"
 
+-- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
+-- the layering is enforced by the module lists below, not by the dependency set.
+require «termcolor-terminal» from git
+  "https://github.com/jonaprieto/lean-termcolor-terminal.git"
+  @ "67f30f2f16da5d95861668f44e547a7b4301b947"
+
+/-- The pure library. Deps: grip, termcolor, termcolor-layout. Listed explicitly rather
+than globbed so that adding a module cannot silently widen what a consumer links. -/
 @[default_target]
 lean_lib «Argus» where
-  globs := #[.andSubmodules `Argus]
+  globs := #[.one `Argus, .one `Argus.Param, .one `Argus.Spec, .one `Argus.Runner,
+             .one `Argus.Command, .one `Argus.Help, .one `Argus.Completions]
+
+/-- The IO layer, opt-in. Adds termcolor-terminal. A consumer that only parses, or that
+renders to a fixed width, never imports this and never links it. -/
+lean_lib «Argus.Term» where
+  globs := #[.one `Argus.Term]
 
 lean_exe «demo» where
   root := `Demo
