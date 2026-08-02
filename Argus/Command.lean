@@ -70,6 +70,23 @@ partial def run (c : Command α) (argv : List String) : Except (List Err) α :=
       | some child => run child remaining
       | none => .error [.unknownSubcommand given (suggest available given)]
 
+/-- Follow subcommand names as far as they match, returning the deepest command reached.
+
+Flags are stepped over, so `tool --verbose build --help` still resolves to `build`. An
+unrecognised name stops the walk and yields the last good command, which is what a user
+asking for help after a typo should see. -/
+partial def resolve (c : Command α) : List String → Command α
+  | [] => c
+  | a :: rest =>
+    if a.startsWith "-" then resolve c rest
+    else
+      match c.body with
+      | .opts _ => c
+      | .subs children =>
+        match children.find? (·.name == a) with
+        | some child => resolve child rest
+        | none => c
+
 /-- The command's erased metadata. -/
 def toMeta (c : Command α) : Meta :=
   match c.body with

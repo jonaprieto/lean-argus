@@ -55,14 +55,18 @@ def main (argv : List String) : IO UInt32 :=
 ```
 -/
 def main (c : Command α) (argv : List String) (body : α → IO UInt32) : IO UInt32 := do
-  match argv with
-  | ["--help"] | ["-h"] =>
-    printHelp c
+  -- `--help` is honoured wherever it appears, and reports the deepest subcommand reached:
+  -- `tool build --help` documents `build`, not `tool`. Matching only `["--help"]` at the
+  -- root would send it down to the child, which would reject it as an unknown flag.
+  if argv.contains "--help" || argv.contains "-h" then
+    printHelp (c.resolve argv)
     return 0
-  | ["--version"] =>
-    match c.version with
-    | some v => IO.println s!"{c.name} {v}"; return 0
-    | none => IO.println c.name; return 0
+  if argv.contains "--version" then
+    let target := c.resolve argv
+    match target.version <|> c.version with
+    | some v => IO.println s!"{target.name} {v}"; return 0
+    | none => IO.println target.name; return 0
+  match argv with
   | ["--completions", shell] =>
     match shell with
     | "bash" => IO.print (Completions.bash c); return 0

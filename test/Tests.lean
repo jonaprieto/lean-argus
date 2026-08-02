@@ -163,6 +163,33 @@ private def leftoverChecks : List (Option String) :=
         matches .ok ["a", "b", "c"])
   ]
 
+/-! ### Resolving a subcommand path for --help -/
+
+private def resolveChecks : List (Option String) :=
+  -- All children of a group share one result type; the application supplies the sum.
+  let leaf := Argus.cmd "leaf"
+    (Spec.map (fun (s : String) => s) (Spec.arg "S" "s" Param.str)) (description := "L")
+  let inner := Argus.group "inner" [leaf] (description := "I")
+  let build := Argus.cmd "build"
+    (Spec.map (fun (_ : Bool) => "b") (Spec.switch "release" (some 'r') "R"))
+    (description := "B")
+  let root := Argus.group "tool" [build, inner] (version := some "1.0")
+  [ check "an empty path resolves to the root"
+      ((root.resolve []).name == "tool")
+  , check "one level resolves to the child"
+      ((root.resolve ["build"]).name == "build")
+  , check "two levels resolve to the grandchild"
+      ((root.resolve ["inner", "leaf"]).name == "leaf")
+  , check "flags are stepped over while resolving"
+      ((root.resolve ["--verbose", "build", "--help"]).name == "build")
+  , check "an unknown name stops at the last good command"
+      ((root.resolve ["nope", "leaf"]).name == "tool")
+  , check "resolving past a leaf stops at the leaf"
+      ((root.resolve ["build", "extra"]).name == "build")
+  , check "the resolved child carries its own flags, not the parent's"
+      ((root.resolve ["build"]).flagNames == ["release"])
+  ]
+
 /-! ### Edit distance (backs "did you mean") -/
 
 private def editDistanceChecks : List (Option String) :=
@@ -370,7 +397,7 @@ def main : IO UInt32 := do
   let results :=
     paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks ++ leftoverChecks
       ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks
-      ++ subcommandChecks
+      ++ subcommandChecks ++ resolveChecks
       ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then
