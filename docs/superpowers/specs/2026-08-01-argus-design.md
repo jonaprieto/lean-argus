@@ -1,7 +1,7 @@
 # argus — design
 
 Date: 2026-08-01
-Status: approved design, not yet implemented
+Status: implemented; see "As built" at the end for where reality departed
 Repo: `lean-argus` (private), namespace `Argus`, package `argus`, Apache-2.0
 
 ## Summary
@@ -268,3 +268,64 @@ inspectable-spec thesis: one command value fed colored help *and* a valid bash c
 script, 2.8 MB binary, `libc++` + `libSystem` only, generated script passing `bash -n` and
 completing correctly when sourced. Its `Help.lean` used `Layout.padRight` and display-cell
 width as designed. Superseded by Decision 7, but the layering it validated carries over.
+
+---
+
+# As built (2026-08-02)
+
+Everything in the build-order table shipped. What follows is where the implementation
+departed from this document, and why. The design above is left as written; this section is
+the correction.
+
+## Departures
+
+**`Spec.toMeta` returns `Argus.Meta`, not `Cli.Cmd.Meta`.** Decision 7 dropped `lean4-cli`
+after the type signatures above were written. `Meta`, `FlagInfo`, and `ArgInfo` are ours.
+Nothing else about the projection changed: help and completions still read only it.
+
+**The runner is hand-rolled, taking the fallback named in decision 6b.** grip runs over
+`ByteArray`, so using it for argv structure meant NUL-joining and mapping byte offsets back
+to argv indices, for no gain at ten tokens. grip does the work one level down, in `Param`,
+where flag values are real grammars — which was the correct reading of the job all along.
+
+**`Command` gained subcommands**, which this document did not anticipate. It is now a leaf
+holding a spec or a branch holding children, defined mutually with `Body`. All children of a
+branch share one result type, so the application supplies its own sum and `Command` stays
+non-dependent. `Command.run` and `Command.resolve` are `partial` — the mutual
+structure/inductive defeats the equation compiler's termination checker, which is a wart in
+a library that otherwise avoids `partial`.
+
+**`Argus.Term` was added**, an opt-in IO layer over `termcolor-terminal`. `Argus.Help` stays
+pure and takes `width` as a parameter; `Term` is where the terminal is actually asked. It is
+a separate `lean_lib`, so a consumer that only parses never links it.
+
+**`Err.unexpectedArg` was added.** Unknown flags were reported but leftover positionals were
+silently dropped, so `tool a b c` against a one-argument spec returned `ok a`. Found by
+reviewing tests that had encoded the bug as expected behaviour.
+
+## What is not proven
+
+The spec presented `help_sound` and `completion_sound` as the distinctive claim. **They are
+not theorems.** Both implementations bottom out in opaque string-search primitives, so a
+kernel proof needs a theorem layer that does not exist. They are executable tests.
+
+What is proven, generally: `reachableFlagNames_eq`, a structural induction over all eight
+`Spec` constructors showing that the metadata projection agrees with structural flag
+reachability. That is the half of the coherence argument that carries the weight — help and
+completions read a projection provably tracking the spec. The remaining half, that rendering
+faithfully transcribes the projection into text, is tested and not proved.
+
+`#print axioms` on every theorem reports only `propext`, `Classical.choice`, and
+`Quot.sound`. No `sorry`, no `axiom`, no `native_decide`.
+
+## Known debt
+
+- `Argus.Macro` splices raw syntax nodes by position, because a macro cannot ask an
+  elaborator for a structure's shape. Brittle against Lean's internal syntax layout; the
+  alternative is the measured 104 MB `Lean.Elab` import.
+- `Command.run` and `Command.resolve` are `partial`.
+- Completion scripts are context-free: after `tool build `, they do not narrow to `build`'s
+  flags.
+- `fish -n` is unverified; fish is not installed on the development machine.
+- CI cannot pass until a `TERMCOLOR_READ_TOKEN` secret exists on the repo, since all four
+  dependencies are private.
