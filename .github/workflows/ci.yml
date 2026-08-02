@@ -47,7 +47,7 @@ jobs:
           restore-keys: lake-${{ runner.os }}-
       - uses: leanprover/lean-action@v1
         with:
-          build-args: "Argus Argus.Term Argus.Properties tests demo readme"
+          build-args: "Argus Argus.Term Argus.Properties tests demo readme completion-fixture"
       - name: Run the test suite
         run: ./.lake/build/bin/tests
       - name: Generated completion scripts must be valid shell
@@ -56,3 +56,26 @@ jobs:
           ./.lake/build/bin/demo --completions zsh  > /tmp/c.zsh
           bash -n /tmp/c.bash
           zsh -n /tmp/c.zsh
+      # Asserting on the script's text cannot tell you whether a shell offers the right
+      # words. This sources it and drives COMP_WORDS at three depths.
+      - name: Completions must offer the right words at each depth
+        shell: bash
+        run: |
+          ./.lake/build/bin/completion-fixture --completions bash > /tmp/t.bash
+          bash -n /tmp/t.bash
+          comp() {
+            ( source /tmp/t.bash
+              COMP_WORDS=($1); COMP_CWORD=$2
+              _tool_completions
+              printf '%s ' "${COMPREPLY[@]}" )
+          }
+          root=$(comp "tool ''" 1)
+          leaf=$(comp "tool build ''" 2)
+          sib=$(comp "tool test ''" 2)
+          nest=$(comp "tool inner ''" 2)
+          echo "root=[$root] leaf=[$leaf] sib=[$sib] nest=[$nest]"
+          case "$root" in *build*test*inner*) ;; *) echo "root arm wrong"; exit 1;; esac
+          case "$leaf" in *--release*) ;; *) echo "leaf arm missing its flag"; exit 1;; esac
+          case "$leaf" in *--jobs*) echo "sibling flag leaked into leaf"; exit 1;; esac
+          case "$sib"  in *--jobs*) ;; *) echo "sibling arm missing its flag"; exit 1;; esac
+          case "$nest" in *leaf*) ;; *) echo "nested arm wrong"; exit 1;; esac

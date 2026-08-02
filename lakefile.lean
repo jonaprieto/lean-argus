@@ -50,3 +50,7 @@ lean_exe «tests» where
 lean_exe «readme» where
   root := `Readme
   srcDir := "test"
+
+lean_exe «completion-fixture» where
+  root := `CompletionFixture
+  srcDir := "test"

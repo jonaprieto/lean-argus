@@ -379,14 +379,73 @@ private def subcommandChecks : List (Option String) :=
       (hasSubstr leafHelp "FLAGS" && hasSubstr leafHelp "--force"
         && !hasSubstr leafHelp "SUBCOMMANDS")
   , check "branch bash completions offer child names"
-      (hasSubstr bash "build" && hasSubstr bash "admin" && hasSubstr bash "echo"
-        && !hasSubstr bash "--force")
+      (hasSubstr bash "build" && hasSubstr bash "admin" && hasSubstr bash "echo")
   , check "branch zsh completions offer child names"
       (hasSubstr zsh "build" && hasSubstr zsh "admin" && hasSubstr zsh "echo")
   , check "branch fish completions offer child names"
       (hasSubstr fish "build" && hasSubstr fish "admin" && hasSubstr fish "echo")
   , check "leaf completions still offer flags"
       (hasSubstr leafBash "--force" && hasSubstr leafZsh "--force" && hasSubstr leafFish "force")
+  ]
+
+private def completionLeafCommand : Command SubcommandResult :=
+  Argus.cmd "leaf"
+    (Spec.map (fun (_ : Bool) => SubcommandResult.status true)
+      (Spec.switch "verbose" (some 'v') "Leaf verbosity"))
+
+private def unsafeCompletionCommand : Command SubcommandResult :=
+  Argus.cmd "bad;name"
+    (Spec.map (fun (_ : Bool) => SubcommandResult.echo "unsafe")
+      (Spec.switch "unsafe" none "Unsafe command"))
+
+private def contextCompletionApp : Command SubcommandResult :=
+  Argus.group "tool"
+    [buildCommand, Argus.group "inner" [completionLeafCommand], unsafeCompletionCommand]
+
+private def completionArm (script path : String) : String :=
+  match script.splitOn ("    \"" ++ path ++ "\")") with
+  | _ :: rest =>
+    match rest with
+    | body :: _ =>
+      match body.splitOn "    \"" with
+      | body :: _ => body
+      | [] => ""
+    | [] => ""
+  | [] => ""
+
+private def completionContextChecks : List (Option String) :=
+  let bash := Completions.bash contextCompletionApp
+  let zsh := Completions.zsh contextCompletionApp
+  let fish := Completions.fish contextCompletionApp
+  let rootArm := completionArm bash ""
+  let buildArm := completionArm bash "build"
+  let innerArm := completionArm bash "inner"
+  let leafArm := completionArm bash "inner leaf"
+  let plainLeaf := Argus.cmd "plain"
+    (Spec.map (fun (_ : Bool) => SubcommandResult.status false)
+      (Spec.switch "plain-flag" none "Plain flag"))
+  [ check "context root arm offers top-level children"
+      (hasSubstr rootArm "build inner" && !hasSubstr rootArm "bad;name")
+  , check "context leaf arm offers its own flags"
+      (hasSubstr leafArm "--verbose")
+  , check "context nested arm offers nested children"
+      (hasSubstr innerArm "leaf")
+  , check "context leaf flags stay in their own arms"
+      (!hasSubstr buildArm "--verbose" && !hasSubstr leafArm "--force")
+  , check "context unsafe names reach no generated script"
+      (!hasSubstr bash "bad;name" && !hasSubstr zsh "bad;name" && !hasSubstr fish "bad;name")
+  , check "context validation reports unsafe names"
+      (Completions.validate contextCompletionApp == ["bad;name"])
+  , check "context zsh uses a subcommand state"
+      (hasSubstr zsh "1:subcommand:->subcommand" && hasSubstr zsh "_describe")
+  , check "context fish uses nested command conditions"
+      (hasSubstr fish "complete -c tool"
+        && !hasSubstr fish "complete -c build"
+        && hasSubstr fish "__fish_seen_subcommand_from inner" && hasSubstr fish "leaf")
+  , check "plain leaf completions still offer flags"
+      (hasSubstr (Completions.bash plainLeaf) "--plain-flag"
+        && hasSubstr (Completions.zsh plainLeaf) "--plain-flag"
+        && hasSubstr (Completions.fish plainLeaf) "plain-flag")
   ]
 
 private def completionSafetyChecks : List (Option String) :=
@@ -427,6 +486,7 @@ def main : IO UInt32 := do
       ++ leftoverChecks
       ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks
       ++ subcommandChecks ++ resolveChecks
+      ++ completionContextChecks
       ++ completionSafetyChecks
       ++ helpChecks
   let failures := results.filterMap id

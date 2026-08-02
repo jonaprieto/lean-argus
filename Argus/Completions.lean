@@ -15,12 +15,17 @@ completions should not have to link a terminal stack.
 Like help, the script is computed from `Spec.toMeta`, so it cannot describe a flag the
 parser does not accept. That is `completion_sound`.
 
+## Context
+
+Each generated script follows safe, non-flag words on the command line to the matching
+node. Branches offer child names; leaves offer their own flags and path arguments.
+
 ## Injection
 
 Flag names are interpolated into shell word lists. A name containing `$`, a backtick, or
 a quote would execute when the script is sourced. `isSafeName` is the gate, and every
-generator filters through it, so a malformed spec produces a smaller script rather than a
-dangerous one. `validate` reports what was dropped.
+generator filters through it, so a malformed spec produces a smaller script rather than
+a dangerous one. `validate` reports what was dropped.
 -/
 
 namespace Argus.Completions
@@ -32,12 +37,17 @@ def isSafeName (s : String) : Bool :=
   !s.isEmpty && s.all fun c =>
     c.isAlphanum || c == '-' || c == '_'
 
+private partial def invalidNames (c : Command α) : List String :=
+  match c.body with
+  | .opts _ => (c.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
+  | .subs children =>
+    let childNames := children.map (·.name) |>.filter (fun n => !isSafeName n)
+    childNames ++ children.flatMap fun child => invalidNames child
+
 /-- Names that would be unsafe to interpolate into a script. Empty means the command is
 safe to generate from. -/
 def validate (c : Command α) : List String :=
-  match c.body with
-  | .opts _ => (c.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
-  | .subs children => children.map (·.name) |>.filter (fun n => !isSafeName n)
+  invalidNames c
 
 /-- Long and short flag words a shell should offer, unsafe names dropped. -/
 private def flagWords (c : Command α) : List String :=
@@ -62,72 +72,186 @@ private def subcommandNames (c : Command α) : List String :=
 private def safeName (c : Command α) : String :=
   String.ofList (c.name.toList.map fun ch => if isSafeName ch.toString then ch else '_')
 
+private def commandTarget (c : Command α) : String :=
+  if isSafeName c.name then c.name else "_" ++ safeName c
+
+private partial def nodes (path : List String) (c : Command α) :
+    List (List String × Command α) :=
+  let here := [(path, c)]
+  match c.body with
+  | .opts _ => here
+  | .subs children =>
+    let safeChildren := children.filter (fun child => isSafeName child.name)
+    here ++ safeChildren.flatMap fun child => nodes (path ++ [child.name]) child
+
+private def pathKey (path : List String) : String :=
+  " ".intercalate path
+
 /-! ### bash -/
 
-/-- A bash completion script. Source it, or drop it in `/etc/bash_completion.d`. -/
+private def bashWords (c : Command α) : String :=
+  match c.body with
+  | .opts _ => " ".intercalate (flagWords c)
+  | .subs _ => " ".intercalate (subcommandNames c)
+
+private def bashFiles (c : Command α) : String :=
+  if wantsFiles c then
+    "      if [[ -z \"$cur\" || \"$cur\" != -* ]]; then\n" ++
+    "        COMPREPLY+=( $(compgen -f -- \"$cur\") )\n" ++
+    "      fi\n"
+  else ""
+
+private def bashArm (node : List String × Command α) : String :=
+  let path := pathKey node.1
+  let c := node.2
+  "    \"" ++ path ++ "\")\n" ++
+  "      COMPREPLY=( $(compgen -W \"" ++ bashWords c ++
+    "\" -- \"$cur\") )\n" ++
+  bashFiles c ++
+  "      ;;\n"
+
+/-- A bash completion script. Source it, or drop it in /etc/bash_completion.d. -/
 def bash (c : Command α) : String :=
   let fn := "_" ++ safeName c ++ "_completions"
-  let words := match c.body with
-    | .opts _ => " ".intercalate (flagWords c)
-    | .subs _ => " ".intercalate (subcommandNames c)
-  let fileLine :=
-    if wantsFiles c then
-      "  if [[ -z \"$cur\" || \"$cur\" != -* ]]; then\n" ++
-      "    COMPREPLY+=( $(compgen -f -- \"$cur\") )\n  fi\n"
-    else ""
   fn ++ "() {\n" ++
   "  local cur=\"${COMP_WORDS[COMP_CWORD]}\"\n" ++
-  "  COMPREPLY=( $(compgen -W \"" ++ words ++ "\" -- \"$cur\") )\n" ++
-  fileLine ++
+  "  local path=\"\" word i\n" ++
+  "  for ((i=1; i<COMP_CWORD; i++)); do\n" ++
+  "    word=\"${COMP_WORDS[i]}\"\n" ++
+  "    if [[ \"$word\" != -* ]]; then\n" ++
+  "      [[ -n \"$path\" ]] && path+=\" \"\n" ++
+  "      path+=\"$word\"\n" ++
+  "    fi\n" ++
+  "  done\n" ++
+  "  case \"$path\" in\n" ++
+  "".intercalate ((nodes [] c).map bashArm) ++
+  "    *) COMPREPLY=() ;;\n" ++
+  "  esac\n" ++
   "}\n" ++
-  "complete -F " ++ fn ++ " " ++ c.name ++ "\n"
+  "complete -F " ++ fn ++ " -- " ++ commandTarget c ++ "\n"
 
 /-! ### zsh -/
 
-/-- A zsh completion script using `_arguments`, with per-flag descriptions. -/
-def zsh (c : Command α) : String :=
-  let specs := match c.body with
-    | .opts _ =>
-      let m := c.toMeta
-      m.flags.filter (fun f => isSafeName f.long) |>.map fun f =>
-        let desc := f.help.replace "'" ""
-        let arg := match f.typeName with
-          | none => ""
-          | some t => ":" ++ t ++ ":"
-        match f.short with
-        | some ch => "    '(-" ++ ch.toString ++ " --" ++ f.long ++ ")'{-" ++ ch.toString ++
-            ",--" ++ f.long ++ "}'[" ++ desc ++ "]" ++ arg ++ "'"
-        | none => "    '--" ++ f.long ++ "[" ++ desc ++ "]" ++ arg ++ "'"
+private def zshFlagSpec (f : FlagInfo) : String :=
+  let desc := f.help.replace "'" ""
+  let arg := match f.typeName with
+    | none => ""
+    | some t => ":" ++ t.replace "'" "" ++ ":"
+  let short := f.short.bind fun ch =>
+    if isSafeName ch.toString then some ch else none
+  match short with
+  | some ch =>
+    let s := ch.toString
+    "'(-" ++ s ++ " --" ++ f.long ++ ")'{-" ++ s ++ ",--" ++ f.long ++
+      "}'[" ++ desc ++ "]" ++ arg ++ "'"
+  | none => "'--" ++ f.long ++ "[" ++ desc ++ "]" ++ arg ++ "'"
+
+private def zshFlagSpecs (c : Command α) : List String :=
+  c.toMeta.flags.filter (fun f => isSafeName f.long) |>.map zshFlagSpec
+
+private def zshLeafArm (path : List String) (c : Command α) : String :=
+  let specs := zshFlagSpecs c ++ (if wantsFiles c then ["'*:file:_files'"] else [])
+  let body := if specs.isEmpty then
+      "          :\n"
+    else
+      "          _arguments \\\n" ++
+        " \\\n".intercalate (specs.map fun spec => "            " ++ spec) ++ "\n"
+  "        \"" ++ pathKey path ++ "\")\n" ++ body ++ "          ;;\n"
+
+private def zshBranchArm (path : List String) (c : Command α) : String :=
+  let choices := match c.body with
+    | .opts _ => []
     | .subs children =>
       children.filter (fun child => isSafeName child.name) |>.map fun child =>
-        "    '" ++ child.name ++ "[" ++ child.description.replace "'" "" ++ "]'"
-  let files := if wantsFiles c then ["    '*:file:_files'"] else []
-  "#compdef " ++ c.name ++ "\n" ++
-  "_" ++ safeName c ++ "() {\n" ++
-  "  _arguments \\\n" ++
-  " \\\n".intercalate (specs ++ files) ++ "\n" ++
+        "'" ++ child.name ++ ":" ++ child.description.replace "'" "" ++ "'"
+  "        \"" ++ pathKey path ++ "\")\n" ++
+  "          choices=(" ++ " ".intercalate choices ++ ")\n" ++
+  "          _describe 'subcommand' choices\n" ++
+  "          ;;\n"
+
+private def zshArm (node : List String × Command α) : String :=
+  match node.2.body with
+  | .opts _ => zshLeafArm node.1 node.2
+  | .subs _ => zshBranchArm node.1 node.2
+
+/-- A zsh completion script using _arguments state dispatch and _describe. -/
+def zsh (c : Command α) : String :=
+  let fn := "_" ++ safeName c
+  "#compdef " ++ commandTarget c ++ "\n" ++
+  fn ++ "() {\n" ++
+  "  local state path=\"\" i word\n" ++
+  "  local -a choices\n" ++
+  "  for ((i=2; i<CURRENT; i++)); do\n" ++
+  "    word=\"${words[i]}\"\n" ++
+  "    if [[ \"$word\" != -* ]]; then\n" ++
+  "      [[ -n \"$path\" ]] && path+=\" \"\n" ++
+  "      path+=\"$word\"\n" ++
+  "    fi\n" ++
+  "  done\n" ++
+  "  _arguments -C \\\n" ++
+  "    '1:subcommand:->subcommand' \\\n" ++
+  "    '*::argument:->argument'\n" ++
+  "  case \"$state\" in\n" ++
+  "    subcommand|argument)\n" ++
+  "      case \"$path\" in\n" ++
+  "".intercalate ((nodes [] c).map zshArm) ++
+  "      esac\n" ++
+  "      ;;\n" ++
+  "  esac\n" ++
   "}\n" ++
-  "_" ++ safeName c ++ " \"$@\"\n"
+  fn ++ " \"$@\"\n"
 
 /-! ### fish -/
 
-/-- fish completions, one `complete` line per flag. -/
+private partial def descendantNames (c : Command α) : List String :=
+  match c.body with
+  | .opts _ => []
+  | .subs children =>
+    let safeChildren := children.filter (fun child => isSafeName child.name)
+    safeChildren.flatMap fun child => [child.name] ++ descendantNames child
+
+private def fishCondition (path : List String) (c : Command α) : Option String :=
+  match path with
+  | [] => match c.body with
+    | .opts _ => none
+    | .subs _ => some "__fish_use_subcommand"
+  | _ =>
+    let seen := "; and ".intercalate
+      (path.map fun name => "__fish_seen_subcommand_from " ++ name)
+    let blocked := (descendantNames c).map
+      (fun name => "not __fish_seen_subcommand_from " ++ name)
+    some (seen ++ if blocked.isEmpty then "" else "; and " ++ "; and ".intercalate blocked)
+
+private def fishWhen (condition : Option String) : String :=
+  match condition with
+  | none => ""
+  | some value => " -n '" ++ value ++ "'"
+
+private def fishFlagLine (target : String) (when : String) (f : FlagInfo) : String :=
+  let short := f.short.bind fun ch =>
+    if isSafeName ch.toString then some (" -s " ++ ch.toString) else none
+  let takesArg := if f.typeName.isSome then " -r" else ""
+  "complete -c " ++ target ++ " -l " ++ f.long ++ (short.getD "") ++ takesArg ++ when ++
+    " -d '" ++ f.help.replace "'" "" ++ "'"
+
+private def fishNodeLines (target : String) (node : List String × Command α) : List String :=
+  let path := node.1
+  let c := node.2
+  let when := fishWhen (fishCondition path c)
+  match c.body with
+  | .opts _ =>
+    let flags := c.toMeta.flags.filter (fun f => isSafeName f.long) |>.map
+      (fishFlagLine target when)
+    let noFiles := if wantsFiles c then [] else ["complete -c " ++ target ++ " -f" ++ when]
+    flags ++ noFiles
+  | .subs _ =>
+    let names := " ".intercalate (subcommandNames c)
+    if names.isEmpty then []
+    else ["complete -c " ++ target ++ " -f" ++ when ++ " -a '" ++ names ++ "'"]
+
+/-- fish completions use command-line conditions for every safe node in the tree. -/
 def fish (c : Command α) : String :=
-  let lines := match c.body with
-    | .opts _ =>
-      let m := c.toMeta
-      m.flags.filter (fun f => isSafeName f.long) |>.map fun f =>
-        let desc := f.help.replace "'" ""
-        let short := match f.short with
-          | some ch => " -s " ++ ch.toString
-          | none => ""
-        let takesArg := if f.typeName.isSome then " -r" else ""
-        "complete -c " ++ c.name ++ " -l " ++ f.long ++ short ++ takesArg ++
-          " -d '" ++ desc ++ "'"
-    | .subs _ =>
-      let names := " ".intercalate (subcommandNames c)
-      if names.isEmpty then [] else ["complete -c " ++ c.name ++ " -f -a '" ++ names ++ "'"]
-  let files := if wantsFiles c then [] else ["complete -c " ++ c.name ++ " -f"]
-  "\n".intercalate (lines ++ files) ++ "\n"
+  let target := commandTarget c
+  "\n".intercalate ((nodes [] c).flatMap (fishNodeLines target)) ++ "\n"
 
 end Argus.Completions
