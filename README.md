@@ -7,8 +7,6 @@ A command-line library for Lean 4. Flag values are grammars, not strings; help t
 shell completions are derived from the same value the parser runs on, so they cannot
 disagree with it.
 
-Private, for the author's own tools.
-
 ## Layers
 
 One repo, one `require`, layered `lean_lib` targets. Import only what you need.
@@ -25,7 +23,7 @@ Argus.Spec  Argus.Param  Argus.Runner  Argus.Command  Argus.Help  Argus.Completi
    |           |           |                |           |             |
    +-----------+-----------+----------------+           |             |
                |                                        |             |
-        grip (private)                            termcolor,      (Spec only)
+        grip                                        termcolor,      (Spec only)
    Grade / Modality + GParser                  termcolor-layout
 
 Argus.Macro       argus_opts: structure + Spec in one declaration (macro, no Lean.Elab)
@@ -33,9 +31,24 @@ Argus.Term        opt-in IO layer: real terminal width, NO_COLOR (+ termcolor-te
 Argus.Properties  machine-checked laws, separate target so consumers do not link proofs
 ```
 
-`Argus.Completions` depends on the spec alone — no color, no IO. `Argus.Help` adds
-`termcolor` and `termcolor-layout` only. `termcolor-widgets` and `termcolor-terminal` are
-not dependencies: help takes `width` as a parameter, so the caller owns terminal size.
+`Argus.Completions` depends on the spec alone — no color, no IO. `Argus.Help` uses
+[`termcolor`](https://github.com/jonaprieto/lean-termcolor) and
+[`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout), while
+`Argus.Term` adds terminal sizing and output through
+[`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal).
+
+## Package chain
+
+These packages form one focused stack:
+
+[`termcolor`](https://github.com/jonaprieto/lean-termcolor) →
+[`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout) →
+[`termcolor-widgets`](https://github.com/jonaprieto/lean-termcolor-widgets) →
+[`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal)
+
+Argus sits above it: [`grip`](https://github.com/jonaprieto/grip) supplies value grammars,
+`Argus.Help` uses layout, and `Argus.Term` connects parsed commands to terminal output.
+Each package keeps its machine-checked properties in a separate build target.
 
 ## Quick start
 
@@ -201,13 +214,6 @@ lake exe tests                # the assertion suite, no framework
 lake exe demo                 # one Command value -> help, parses, completion scripts
 python3 scripts/style-check.py
 ```
-
-## Design
-
-See the [design document](docs/superpowers/specs/2026-08-01-argus-design.md) for the full
-design, including the measured constraint that shaped it: a single
-`import Lean.Elab` costs about 104 MB in every downstream binary, which is why the
-`argus_opts` front door is a macro rather than a `deriving` handler.
 
 ## License
 

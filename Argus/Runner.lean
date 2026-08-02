@@ -19,10 +19,10 @@ rather than stopping at the first. `ap` has no data dependency between its sides
 run: `tool --jobs=abc --colour=auto` reports the bad `Nat` *and* the unknown flag in one
 pass.
 
-Per design decision 6b, this layer is hand-rolled rather than grip-backed. grip runs over
-`ByteArray`, so using it here would mean NUL-joining argv and mapping byte offsets back to
-argv indices, for no benefit at a workload of roughly ten tokens. grip earns its place one
-level down, in `Argus.Param`, where flag *values* are real grammars.
+This layer is hand-rolled rather than grip-backed. grip runs over `ByteArray`, so using it
+here would mean NUL-joining argv and mapping byte offsets back to argv indices, for no
+benefit at a workload of roughly ten tokens. grip earns its place one level down, in
+`Argus.Param`, where flag *values* are real grammars.
 -/
 
 namespace Argus

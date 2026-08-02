@@ -23,28 +23,27 @@ jobs:
       # persist-credentials: false is load-bearing. checkout otherwise writes its own
       # GITHUB_TOKEN into http.https://github.com/.extraheader, and that header overrides
       # the credentials in a rewritten URL. GITHUB_TOKEN can only see this repository, so
-      # every private dependency comes back as "Repository not found" even when the PAT
+      # every dependency comes back as "Repository not found" even when the PAT
       # in the secret has access to all of them.
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      # Every dependency is private: grip, termcolor, termcolor-layout,
-      # termcolor-terminal. The credential is set here and left in place; removing it
+      # The credential is set here and left in place; removing it
       # in this same step would leave the build unauthenticated.
       #
       # `secrets` is not available to `if:` expressions -- using it there is a workflow
       # validation error that produces zero jobs and a failing run that never built
       # anything. `test -n` is the guard instead.
-      - name: Authenticate private Lake dependencies
+      - name: Authenticate Lake dependencies
         env:
           TERMCOLOR_READ_TOKEN: ${{ secrets.TERMCOLOR_READ_TOKEN }}
         run: |
           test -n "$TERMCOLOR_READ_TOKEN"
           git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
-      # lake reports a bare "git exited with code 128" when it cannot reach a private
+      # lake reports a bare "git exited with code 128" when it cannot reach a
       # dependency, without saying which one or why. Check each up front so a token that
       # is missing a repository fails with the repository's name.
-      - name: Private dependencies must be reachable
+      - name: Lake dependencies must be reachable
         env:
           TERMCOLOR_READ_TOKEN: ${{ secrets.TERMCOLOR_READ_TOKEN }}
         run: |
