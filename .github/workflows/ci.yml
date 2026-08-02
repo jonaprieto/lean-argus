@@ -34,6 +34,29 @@ jobs:
         run: |
           test -n "$TERMCOLOR_READ_TOKEN"
           git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
+      # lake reports a bare "git exited with code 128" when it cannot reach a private
+      # dependency, without saying which one or why. Check each up front so a token that
+      # is missing a repository fails with the repository's name.
+      - name: Private dependencies must be reachable
+        env:
+          TERMCOLOR_READ_TOKEN: ${{ secrets.TERMCOLOR_READ_TOKEN }}
+        run: |
+          missing=0
+          for repo in grip lean-termcolor lean-termcolor-layout lean-termcolor-terminal; do
+            if git ls-remote "https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/jonaprieto/$repo.git" HEAD >/dev/null 2>&1; then
+              echo "ok       jonaprieto/$repo"
+            else
+              echo "NO ACCESS jonaprieto/$repo"
+              missing=1
+            fi
+          done
+          if [ "$missing" = 1 ]; then
+            echo
+            echo "TERMCOLOR_READ_TOKEN cannot read every dependency."
+            echo "A fine-grained PAT needs each repository selected explicitly;"
+            echo "a wildcard on the name is not enough."
+            exit 1
+          fi
       - name: Cache elan toolchain
         uses: actions/cache@v4
         with:
