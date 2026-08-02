@@ -41,22 +41,42 @@ jobs:
         env:
           TERMCOLOR_READ_TOKEN: ${{ secrets.TERMCOLOR_READ_TOKEN }}
         run: |
+          if [ -z "$TERMCOLOR_READ_TOKEN" ]; then
+            echo "::error::TERMCOLOR_READ_TOKEN is empty or unset."
+            exit 1
+          fi
+          echo "token length: ${#TERMCOLOR_READ_TOKEN}, prefix: ${TERMCOLOR_READ_TOKEN%%_*}_"
+          # Is the token itself valid, before asking about any repository?
+          code=$(curl -s -o /tmp/who -w '%{http_code}' \
+            -H "Authorization: Bearer $TERMCOLOR_READ_TOKEN" \
+            -H "Accept: application/vnd.github+json" https://api.github.com/user)
+          echo "GET /user -> HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::The token is not a valid GitHub credential (HTTP $code)."
+            head -c 300 /tmp/who; echo
+            exit 1
+          fi
+          echo "authenticated as: $(python3 -c 'import json;print(json.load(open("/tmp/who"))["login"])')"
           missing=0
           for repo in grip lean-termcolor lean-termcolor-layout lean-termcolor-terminal; do
-            if git ls-remote "https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/jonaprieto/$repo.git" HEAD >/dev/null 2>&1; then
-              echo "ok       jonaprieto/$repo"
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer $TERMCOLOR_READ_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/jonaprieto/$repo")
+            if [ "$code" = "200" ]; then
+              echo "ok        jonaprieto/$repo"
             else
-              echo "NO ACCESS jonaprieto/$repo"
+              echo "NO ACCESS jonaprieto/$repo (HTTP $code)"
               missing=1
             fi
           done
           if [ "$missing" = 1 ]; then
-            echo
-            echo "TERMCOLOR_READ_TOKEN cannot read every dependency."
-            echo "A fine-grained PAT needs each repository selected explicitly;"
-            echo "a wildcard on the name is not enough."
+            echo "::error::The token is valid but cannot read every dependency. A fine-grained PAT needs each repository selected explicitly."
             exit 1
           fi
+          git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git ls-remote https://github.com/jonaprieto/grip.git HEAD >/dev/null
+          echo "git clone path works through the credential rewrite"
       - name: Cache elan toolchain
         uses: actions/cache@v4
         with:
