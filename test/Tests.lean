@@ -136,16 +136,31 @@ private def specChecks : List (Option String) :=
       (Argus.run optFlagSpec ["--mode=fast"] matches .ok (some "fast"))
   , check "alt takes the left branch on success"
       (Argus.run altLeftSpec [] matches .ok "left")
-  , check "alt falls back to the right branch"
-      (Argus.run altFallbackSpec ["text"] matches .ok "text")
-  , check "alt does not leak left branch errors"
-      (match Argus.run altFallbackSpec ["text"] with
-       | .ok "text" => true
-       | _ => false)
-  , check "alt restores a failed positional for its right branch"
+  , check "alt falls back to the right branch, restoring what the left consumed"
       (Argus.run altFallbackSpec ["text"] matches .ok "text")
   , check "alt restores a failed positional for a later arg"
-      (Argus.run altThenArgSpec ["text", "later"] matches .ok ("fallback", "text"))
+      (Argus.run altThenArgSpec ["text"] matches .ok ("fallback", "text"))
+  ]
+
+/-- Unclaimed input is a user error, not something to drop quietly. -/
+private def leftoverChecks : List (Option String) :=
+  let one := Spec.arg "X" "x" Param.str
+  let msgs (argv : List String) : List String :=
+    match Argus.run one argv with
+    | .ok _ => []
+    | .error es => es.map Err.message
+  [ check "exactly the expected positionals succeeds"
+      (Argus.run one ["a"] matches .ok "a")
+  , check "one extra positional is reported"
+      (msgs ["a", "b"] == ["unexpected argument 'b'"])
+  , check "every extra positional is reported, not just the first"
+      (msgs ["a", "b", "c"]
+        == ["unexpected argument 'b'", "unexpected argument 'c'"])
+  , check "extra positionals and unknown flags are reported together"
+      ((msgs ["a", "b", "--zzz"]).length == 2)
+  , check "many consumes the rest, so nothing is left over"
+      (Argus.run (Spec.many (Spec.arg "F" "f" Param.str)) ["a", "b", "c"]
+        matches .ok ["a", "b", "c"])
   ]
 
 /-! ### Edit distance (backs "did you mean") -/
@@ -277,7 +292,7 @@ private def helpChecks : List (Option String) :=
 
 def main : IO UInt32 := do
   let results :=
-    paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks
+    paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks ++ leftoverChecks
       ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then

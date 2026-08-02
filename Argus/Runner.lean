@@ -35,6 +35,7 @@ inductive Err where
   | missingFlag (long : String)
   | badValue (flag : String) (given : String) (err : Grip.ParseError)
   | missingArg (name : String)
+  | unexpectedArg (given : String)
   | flagNeedsValue (long : String)
   | custom (msg : String)
   deriving Inhabited
@@ -48,6 +49,7 @@ def Err.message : Err → String
     let expected := if e.expected.isEmpty then "" else s!"; expected {", ".intercalate e.expected}"
     s!"invalid value '{given}' for '--{f}' at column {e.pos}{expected}"
   | .missingArg n => s!"missing required argument <{n}>"
+  | .unexpectedArg g => s!"unexpected argument '{g}'"
   | .flagNeedsValue l => s!"flag '--{l}' needs a value"
   | .custom m => m
 
@@ -222,11 +224,14 @@ def run {g : Grade} {α : Type} (s : Spec g α) (argv : List String) : Except (L
   let ts := tokenize takesValue argv
   let st : St := { flags := ts.flags, positionals := ts.positionals, errors := [] }
   let (v, st) := interp s st
-  -- Anything left in the pool was never claimed by the spec.
+  -- Anything left in the pool was never claimed by the spec. Unclaimed positionals are
+  -- as much a user error as unknown flags: `tool a b c` against a one-argument spec used
+  -- to silently drop b and c.
   let known := s.flagNames
-  let leftovers := st.flags.map (fun (n, _, spelling) =>
+  let leftoverFlags := st.flags.map (fun (n, _, spelling) =>
     Err.unknownFlag spelling (suggest known n))
-  match v, st.errors ++ leftovers with
+  let leftoverArgs := st.positionals.map Err.unexpectedArg
+  match v, st.errors ++ leftoverFlags ++ leftoverArgs with
   | some a, [] => .ok a
   | _, errs => .error (if errs.isEmpty then [Err.custom "parse failed"] else errs)
 
