@@ -107,21 +107,18 @@ someone later hopes to interpret.
 
 ## What it does differently
 
-**Flag values are grammars.** `Param` carries a [grip](https://github.com/jonaprieto/grip)
-parser over the value's bytes, so a value can be a duration, a range, a size, or JSON —
-not just a string that something later hopes to interpret. Errors are positioned:
-
-```
-error: invalid value '12x' for '--jobs' at column 2; expected a natural number
-```
+**Flag values are grammars, and errors point inside them.** `Param` carries a
+[grip](https://github.com/jonaprieto/grip) parser over the value's bytes, so `--timeout`
+takes a duration rather than a string something later hopes to interpret.
 
 **Errors accumulate.** `ap` has no data dependency between its sides, so both run and
-every independent failure is reported in one pass:
+every independent failure is reported in one pass. Real output from the example above:
 
 ```
-$ grepish --jobs=12x --ignor-case needle
+$ grepish --jobs=12x --timout=1h a.txt
 error: invalid value '12x' for '--jobs' at column 2; expected a natural number
-error: unknown flag '--ignor-case'; did you mean '--ignore-case'?
+error: missing required flag '--timeout'
+error: unknown flag '--timout=1h'; did you mean '--timeout'?
 ```
 
 **A zero-width `many` is a type error.** `Spec.many` requires its element to have
@@ -135,37 +132,46 @@ error: Application type mismatch: The argument (Spec.arg "FILE" "input" Param.st
                Spec { errors := ?m, consumes := always } ?m
 ```
 
-**Help and completions are derived, not written.** Both read `Spec.toMeta`, a projection
-of the same value the runner interprets. They cannot describe a flag the parser does not
-accept.
+**Help is derived, not written.** It reads `Spec.toMeta`, a projection of the same value
+the runner interprets, so it cannot describe a flag the parser rejects. Alignment uses
+display-cell width, not `String.length`, so CJK and emoji still line up.
 
 ```
-$ grepish
+$ grepish --help
 grepish 0.1.0
-Search text with an inspectable command line.
 
 USAGE
-  grepish [FLAGS] <PATTERN> <FILE>...
+  grepish [FLAGS] <FILE>...
 
 FLAGS
--i, --ignore-case  Match without regard to case
--n, --line-number  Prefix matches with line numbers
--j, --jobs NAT     Number of worker threads
+-i, --ignore-case   Ignore case
+-j, --jobs NAT      Worker threads
+--timeout DURATION  Give up after
 
 ARGS
-<PATTERN> STRING  Pattern to search for
-<FILE>... PATH    Files to search
+<FILE>... PATH  Files to search
 ```
-
-Alignment uses display-cell width, not `String.length`, so descriptions containing CJK or
-emoji still line up.
 
 ## Completions
 
-`Completions.bash`, `.zsh`, and `.fish` are pure `Command → String`. Flag names are
-filtered through `isSafeName` before interpolation, so a malformed spec produces a smaller
-script rather than one that executes when sourced; `Completions.validate` reports what was
-dropped.
+Pure `Command → String` for bash, zsh, and fish. Each node of a command tree gets its own
+arm, so the script offers what is reachable from where you are:
+
+```
+tool <TAB>            -> build test inner
+tool build <TAB>      -> --release -r        (only its own)
+tool test <TAB>       -> --jobs -j           (build's do not leak in)
+tool inner <TAB>      -> leaf
+tool inner leaf <TAB> -> filenames           (its argument is PATH-typed)
+```
+
+Flag names pass through `isSafeName` before interpolation, so a name carrying `$` or a
+backtick yields a smaller script rather than one that executes when sourced;
+`Completions.validate` reports what was dropped.
+
+CI sources the generated script and drives `COMP_WORDS` at each depth, because asserting
+on the script's text cannot tell you whether a shell offers the right words. All three
+scripts are parsed by their own shell.
 
 ```sh
 $ grepish --completions bash > /etc/bash_completion.d/grepish
@@ -191,16 +197,16 @@ that does not exist yet. They are executable tests, and the module docstring say
 lake build                    # the pure library
 lake build Argus.Term         # opt-in IO layer (+ termcolor-terminal)
 lake build Argus.Properties   # the proofs
-lake exe tests                # 98 assertion checks, no framework
+lake exe tests                # the assertion suite, no framework
 lake exe demo                 # one Command value -> help, parses, completion scripts
 python3 scripts/style-check.py
 ```
 
 ## Design
 
-See [docs/superpowers/specs/2026-08-01-argus-design.md](docs/superpowers/specs/2026-08-01-argus-design.md)
-for the full design, including the measured constraint that shaped it: a single
-`import Lean.Elab` costs about 104 MB in every downstream binary, which is why the planned
+See the [design document](docs/superpowers/specs/2026-08-01-argus-design.md) for the full
+design, including the measured constraint that shaped it: a single
+`import Lean.Elab` costs about 104 MB in every downstream binary, which is why the
 `argus_opts` front door is a macro rather than a `deriving` handler.
 
 ## License
