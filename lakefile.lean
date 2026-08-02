@@ -46,3 +46,7 @@ lean_exe «demo» where
 lean_exe «tests» where
   root := `Tests
   srcDir := "test"
+
+lean_exe «readme» where
+  root := `Readme
+  srcDir := "test"
