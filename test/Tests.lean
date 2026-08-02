@@ -265,6 +265,82 @@ private def messageChecks : List (Option String) :=
       ((firstErr ["--zzzzzzz=2", "needle", "--jobs=1"]).endsWith "unknown flag '--zzzzzzz=2'")
   ]
 
+/-! ### Subcommands -/
+
+inductive SubcommandResult where
+  | build (force : Bool)
+  | echo (value : String)
+  | status (verbose : Bool)
+  deriving BEq
+
+private def buildCommand : Command SubcommandResult :=
+  Argus.cmd "build"
+    (Spec.map SubcommandResult.build
+      (Spec.switch "force" (some 'f') "Build even when unchanged"))
+    (description := "Build the project")
+
+private def statusCommand : Command SubcommandResult :=
+  Argus.cmd "status"
+    (Spec.map SubcommandResult.status
+      (Spec.switch "verbose" (some 'v') "Show detailed status"))
+    (description := "Show project status")
+
+private def adminCommand : Command SubcommandResult :=
+  Argus.group "admin" [statusCommand] (description := "Administrative commands")
+
+private def echoCommand : Command SubcommandResult :=
+  Argus.cmd "echo"
+    (Spec.map SubcommandResult.echo (Spec.arg "VALUE" "Value to echo" Param.str))
+    (description := "Echo a value")
+
+private def subcommandApp : Command SubcommandResult :=
+  Argus.group "tool" [buildCommand, adminCommand, echoCommand]
+
+private def subcommandChecks : List (Option String) :=
+  let help := (Help.render subcommandApp 80).plainText
+  let leafHelp := (Help.render buildCommand 80).plainText
+  let bash := Completions.bash subcommandApp
+  let zsh := Completions.zsh subcommandApp
+  let fish := Completions.fish subcommandApp
+  let leafBash := Completions.bash buildCommand
+  let leafZsh := Completions.zsh buildCommand
+  let leafFish := Completions.fish buildCommand
+  [ check "two-level group dispatches and parses child flags"
+      (subcommandApp.run ["build", "--force"] matches .ok (.build true))
+  , check "nested group dispatches correctly"
+      (subcommandApp.run ["admin", "status", "--verbose"] matches .ok (.status true))
+  , check "missing subcommand lists available names"
+      (match subcommandApp.run [] with
+       | .error [e] =>
+         hasSubstr e.message "build" && hasSubstr e.message "admin" && hasSubstr e.message "echo"
+       | _ => false)
+  , check "unknown subcommand suggests the closest name"
+      (match subcommandApp.run ["buid"] with
+       | .error [e] => hasSubstr e.message "buid" && hasSubstr e.message "build"
+       | _ => false)
+  , check "child flags are not parsed by the parent"
+      (match subcommandApp.run ["--force"] with
+       | .error [.missingSubcommand _ _] => true
+       | _ => false)
+  , check "child receives argv after its name"
+      (subcommandApp.run ["echo", "payload"] matches .ok (.echo "payload"))
+  , check "branch help lists subcommands"
+      (hasSubstr help "SUBCOMMANDS" && hasSubstr help "build"
+        && hasSubstr help "Administrative commands")
+  , check "leaf help still lists flags"
+      (hasSubstr leafHelp "FLAGS" && hasSubstr leafHelp "--force"
+        && !hasSubstr leafHelp "SUBCOMMANDS")
+  , check "branch bash completions offer child names"
+      (hasSubstr bash "build" && hasSubstr bash "admin" && hasSubstr bash "echo"
+        && !hasSubstr bash "--force")
+  , check "branch zsh completions offer child names"
+      (hasSubstr zsh "build" && hasSubstr zsh "admin" && hasSubstr zsh "echo")
+  , check "branch fish completions offer child names"
+      (hasSubstr fish "build" && hasSubstr fish "admin" && hasSubstr fish "echo")
+  , check "leaf completions still offer flags"
+      (hasSubstr leafBash "--force" && hasSubstr leafZsh "--force" && hasSubstr leafFish "force")
+  ]
+
 /-! ### Help rendering -/
 
 private def longCmd :=
@@ -293,7 +369,9 @@ private def helpChecks : List (Option String) :=
 def main : IO UInt32 := do
   let results :=
     paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks ++ leftoverChecks
-      ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks ++ helpChecks
+      ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks
+      ++ subcommandChecks
+      ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then
     IO.println s!"all {results.length} checks passed"

@@ -26,7 +26,7 @@ namespace Argus.Help
 open TermColor
 open scoped TermColor.Style
 
-variable {g : Grade} {α : Type}
+variable {α : Type}
 
 private def titleStyle : Style := Style.bold <+> Style.cyan
 private def sectionStyle : Style := Style.bold <+> Style.blue
@@ -49,7 +49,7 @@ private def rows (width : Nat) (items : List (Text × Text)) : Text :=
   let sep := Text.plain (String.mk (List.replicate gap ' '))
   Layout.joinLines (items.map fun (label, desc) =>
     match Layout.splitLines (Layout.wrapLines descWidth desc) with
-    | [] => Layout.padRight labelWidth label
+    | [] => label
     | first :: rest =>
       Layout.joinLines
         ((Layout.padRight labelWidth label ++ sep ++ first) :: rest.map (indent ++ ·)))
@@ -73,9 +73,10 @@ private def argLabel (a : ArgInfo) : Text :=
   Text.styled ("<" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) Style.bold
     ++ Text.plain (" " ++ a.typeName)
 
+private def subcommandLabel (name : String) : Text := Text.styled name Style.bold
+
 /-- Render a command's help page. -/
-def render (c : Command g α) (width : Nat := 80) : Text :=
-  let m := c.toMeta
+def render (c : Command α) (width : Nat := 80) : Text :=
   let version := match c.version with
     | some v => " " ++ v
     | none => ""
@@ -84,13 +85,19 @@ def render (c : Command g α) (width : Nat := 80) : Text :=
     (if c.description.isEmpty then Text.plain ""
      else nl (Text.styled c.description Style.dim)) ++
     Text.plain "\n"
-  header
-    ++ block "USAGE" (nl (Text.plain ("  " ++ c.usageLine)))
-    ++ block "FLAGS" (rows width (m.flags.map fun f => (flagLabel f, Text.plain f.help)))
-    ++ block "ARGS" (rows width (m.args.map fun a => (argLabel a, Text.plain a.help)))
+  let body := match c.body with
+    | .opts _ =>
+      let m := c.toMeta
+      block "FLAGS" (rows width (m.flags.map fun f => (flagLabel f, Text.plain f.help)))
+        ++ block "ARGS" (rows width (m.args.map fun a => (argLabel a, Text.plain a.help)))
+    | .subs children =>
+      block "SUBCOMMANDS"
+        (rows width (children.map fun child =>
+          (subcommandLabel child.name, Text.plain child.description)))
+  header ++ block "USAGE" (nl (Text.plain ("  " ++ c.usageLine))) ++ body
 
 /-- Render to a string for a known target. -/
-def renderTo (target : RenderTarget) (c : Command g α) (width : Nat := 80) : String :=
+def renderTo (target : RenderTarget) (c : Command α) (width : Nat := 80) : String :=
   Text.render target (render c width)
 
 /-- Render errors as a styled block, one per line. -/

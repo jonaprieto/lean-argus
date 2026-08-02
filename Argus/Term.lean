@@ -24,11 +24,11 @@ namespace Argus.Term
 
 open TermColor
 
-variable {g : Grade} {α : Type}
+variable {α : Type}
 
 /-- Print help to stdout, at the real terminal width, in whatever color the environment
 allows. -/
-def printHelp (c : Command g α) (choice : ColorChoice := .auto) : IO Unit := do
+def printHelp (c : Command α) (choice : ColorChoice := .auto) : IO Unit := do
   let width ← Terminal.terminalWidth
   TermColor.print (Help.render c width) choice
 
@@ -54,7 +54,7 @@ def main (argv : List String) : IO UInt32 :=
     return 0
 ```
 -/
-def main (c : Command g α) (argv : List String) (body : α → IO UInt32) : IO UInt32 := do
+def main (c : Command α) (argv : List String) (body : α → IO UInt32) : IO UInt32 := do
   match argv with
   | ["--help"] | ["-h"] =>
     printHelp c

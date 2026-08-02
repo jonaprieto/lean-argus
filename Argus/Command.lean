@@ -15,40 +15,80 @@ script need: name, version, description.
 
 namespace Argus
 
-/-- A named command wrapping a spec. -/
-structure Command (g : Grade) (α : Type) where
-  name : String
-  version : Option String := none
-  description : String := ""
-  spec : Spec g α
+mutual
+  /-- A named command: either a leaf holding a spec, or a branch holding subcommands. -/
+  structure Command (α : Type) where
+    name : String
+    version : Option String := none
+    description : String := ""
+    body : Body α
+
+  inductive Body (α : Type) where
+    | opts {g : Grade} (spec : Spec g α) : Body α
+    | subs (children : List (Command α)) : Body α
+end
 
 /-- Build a command. Prefer this over the structure literal: the grade is inferred from
 the spec, so callers never write one. -/
 def cmd {g : Grade} {α : Type} (name : String) (spec : Spec g α)
-    (version : Option String := none) (description : String := "") : Command g α :=
-  { name, version, description, spec }
+    (version : Option String := none) (description : String := "") : Command α :=
+  { name, version, description, body := .opts spec }
+
+/-- Build a command group. -/
+def group {α : Type} (name : String) (children : List (Command α))
+    (version : Option String := none) (description : String := "") : Command α :=
+  { name, version, description, body := .subs children }
 
 namespace Command
 
-variable {g : Grade} {α : Type}
+variable {α : Type}
+
+private def firstPositional : List String → Option (String × List String)
+  | [] => none
+  | arg :: rest =>
+    if arg.startsWith "-" then
+      match firstPositional rest with
+      | none => none
+      | some (name, remaining) => some (name, arg :: remaining)
+    else some (arg, rest)
+
+private def suggest (known : List String) (given : String) : Option String :=
+  let scored := known.map (fun k => (editDistance k given, k))
+  match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
+  | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
 
 /-- Parse argv against this command's spec. -/
-def run (c : Command g α) (argv : List String) : Except (List Err) α :=
-  Argus.run c.spec argv
+partial def run (c : Command α) (argv : List String) : Except (List Err) α :=
+  match c.body with
+  | .opts spec => Argus.run spec argv
+  | .subs children =>
+    let available := children.map (·.name)
+    match firstPositional argv with
+    | none => .error [.missingSubcommand c.name available]
+    | some (given, remaining) =>
+      match children.find? (·.name == given) with
+      | some child => run child remaining
+      | none => .error [.unknownSubcommand given (suggest available given)]
 
 /-- The command's erased metadata. -/
-def toMeta (c : Command g α) : Meta := c.spec.toMeta
+def toMeta (c : Command α) : Meta :=
+  match c.body with
+  | .opts spec => spec.toMeta
+  | .subs _ => Meta.empty
 
 /-- Flag names a shell should offer, long form. -/
-def flagNames (c : Command g α) : List String := c.spec.flagNames
+def flagNames (c : Command α) : List String := c.toMeta.flags.map (·.long)
 
 /-- A `USAGE` line derived from the metadata. -/
-def usageLine (c : Command g α) : String :=
-  let m := c.toMeta
-  let flags := if m.flags.isEmpty then "" else " [FLAGS]"
-  let args := m.args.foldl (fun acc a =>
-    acc ++ " <" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) ""
-  c.name ++ flags ++ args
+def usageLine (c : Command α) : String :=
+  match c.body with
+  | .subs _ => c.name ++ " <SUBCOMMAND>"
+  | .opts _ =>
+    let m := c.toMeta
+    let flags := if m.flags.isEmpty then "" else " [FLAGS]"
+    let args := m.args.foldl (fun acc a =>
+      acc ++ " <" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) ""
+    c.name ++ flags ++ args
 
 end Command
 end Argus

@@ -32,6 +32,8 @@ namespace Argus
 /-- A single failure. `badValue` carries grip's positioned `ParseError`. -/
 inductive Err where
   | unknownFlag (given : String) (didYouMean : Option String)
+  | missingSubcommand (command : String) (available : List String)
+  | unknownSubcommand (given : String) (didYouMean : Option String)
   | missingFlag (long : String)
   | badValue (flag : String) (given : String) (err : Grip.ParseError)
   | missingArg (name : String)
@@ -44,6 +46,11 @@ inductive Err where
 def Err.message : Err → String
   | .unknownFlag g none => s!"unknown flag '{g}'"
   | .unknownFlag g (some d) => s!"unknown flag '{g}'; did you mean '--{d}'?"
+  | .missingSubcommand c available =>
+    let names := if available.isEmpty then "(none)" else ", ".intercalate available
+    s!"missing subcommand for '{c}'; available subcommands: {names}"
+  | .unknownSubcommand g none => s!"unknown subcommand '{g}'"
+  | .unknownSubcommand g (some d) => s!"unknown subcommand '{g}'; did you mean '{d}'?"
   | .missingFlag l => s!"missing required flag '--{l}'"
   | .badValue f given e =>
     let expected := if e.expected.isEmpty then "" else s!"; expected {", ".intercalate e.expected}"
