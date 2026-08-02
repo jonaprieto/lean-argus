@@ -46,16 +46,12 @@ private def rule (title : String) : IO Unit := do
   IO.println ""
   IO.println s!"───── {title} ─────"
 
-def main (argv : List String) : IO UInt32 := do
-  -- With arguments, `Argus.Term.main` is the whole entry point: it handles --help,
-  -- --version, and --completions SHELL before parsing, reports every error to stderr at
-  -- the real terminal width, and picks a color target from the environment.
-  if !argv.isEmpty then
-    return ← Term.main grepish argv (fun opts => do
-      IO.println (repr opts)
-      return 0) (scheme := demoScheme)
+private def runOpts (opts : Opts) : IO UInt32 := do
+  IO.println (repr opts)
+  pure 0
 
-  -- With none, show what one Command value produces.
+private def demo : IO UInt32 := do
+  -- With no arguments, show what one Command value produces.
   rule "COLORED HELP"
   IO.print (Help.renderTo RenderTarget.trueColor grepish 80 demoScheme)
 
@@ -81,4 +77,10 @@ def main (argv : List String) : IO UInt32 := do
   rule "FISH COMPLETIONS"
   IO.print (Completions.fish grepish)
 
-  return 0
+  pure 0
+
+def main (argv : List String) : IO UInt32 :=
+  if argv.isEmpty then
+    demo
+  else
+    Term.main grepish argv runOpts (scheme := demoScheme)
