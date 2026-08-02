@@ -37,6 +37,10 @@ Argus.Properties  machine-checked laws, separate target so consumers do not link
 `Argus.Term` adds terminal sizing and output through
 [`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal).
 
+Help uses the semantic `ColorScheme.catppuccin` palette by default; pass another
+`ColorScheme` as the final argument to `Help.render`, `Help.renderTo`, or `Term.main` when an
+application wants a different palette.
+
 ## Package chain
 
 These packages form one focused stack:

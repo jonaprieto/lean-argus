@@ -470,6 +470,12 @@ private def helpChecks : List (Option String) :=
   let lines := (Help.render longCmd 40).plainText.splitOn "\n"
   let flagLines := lines.filter (fun l => (l.splitOn "--verbose").length > 1)
   let contLines := lines.filter (fun l => (l.splitOn "detail").length > 1)
+  let themed := TermColor.Text.render TermColor.RenderTarget.trueColor
+    (Help.render longCmd 40 TermColor.ColorScheme.monokai)
+  let typed := Argus.cmd "typed"
+    (Spec.flag "jobs" none "Worker count" Param.nat)
+  let typedThemed := TermColor.Text.render TermColor.RenderTarget.trueColor
+    (Help.render typed 40 TermColor.ColorScheme.monokai)
   [ check "no line has trailing whitespace"
       (lines.all fun l => !l.endsWith " ")
   , check "the long description wraps onto more than one line"
@@ -478,6 +484,9 @@ private def helpChecks : List (Option String) :=
       (contLines.all fun l => l.startsWith "  ")
   , check "no rendered line exceeds the requested width"
       (lines.all fun l => l.length <= 40)
+  , check "help uses the supplied color scheme"
+      (hasSubstr themed "38;2;174;129;255"
+        && hasSubstr typedThemed "38;2;253;151;31")
   ]
 
 def main : IO UInt32 := do

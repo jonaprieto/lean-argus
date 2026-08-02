@@ -7,6 +7,7 @@ Authors: Jonathan Cubides
 import Argus.Help
 import Argus.Completions
 import TermColor.Terminal
+import TermColor.ColorScheme
 
 /-!
 # Argus.Term: the IO layer
@@ -28,15 +29,17 @@ variable {α : Type}
 
 /-- Print help to stdout, at the real terminal width, in whatever color the environment
 allows. -/
-def printHelp (c : Command α) (choice : ColorChoice := .auto) : IO Unit := do
+def printHelp (c : Command α) (choice : ColorChoice := .auto)
+    (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
   let width ← Terminal.terminalWidth
-  TermColor.print (Help.render c width) choice
+  TermColor.print (Help.render c width scheme) choice
 
 /-- Print errors to stderr. Diagnostics belong on stderr so `tool 2>/dev/null` still
 works and piping stdout stays clean. -/
-def printErrors (errs : List Err) (choice : ColorChoice := .auto) : IO Unit := do
+def printErrors (errs : List Err) (choice : ColorChoice := .auto)
+    (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
   let target ← TermColor.target choice
-  (← IO.getStderr).putStr (Text.render target (Help.renderErrors errs))
+  (← IO.getStderr).putStr (Text.render target (Help.renderErrors errs scheme))
 
 /-- Exit codes: `0` success, `1` runtime failure, `2` usage error. -/
 def usageExit : UInt32 := 2
@@ -54,12 +57,13 @@ def main (argv : List String) : IO UInt32 :=
     return 0
 ```
 -/
-def main (c : Command α) (argv : List String) (body : α → IO UInt32) : IO UInt32 := do
+def main (c : Command α) (argv : List String) (body : α → IO UInt32)
+    (scheme : ColorScheme := ColorScheme.catppuccin) : IO UInt32 := do
   -- `--help` is honoured wherever it appears, and reports the deepest subcommand reached:
   -- `tool build --help` documents `build`, not `tool`. Matching only `["--help"]` at the
   -- root would send it down to the child, which would reject it as an unknown flag.
   if argv.contains "--help" || argv.contains "-h" then
-    printHelp (c.resolve argv)
+    printHelp (c.resolve argv) .auto scheme
     return 0
   if argv.contains "--version" then
     let target := c.resolve argv
@@ -79,8 +83,8 @@ def main (c : Command α) (argv : List String) (body : α → IO UInt32) : IO UI
     match c.run argv with
     | .ok value => body value
     | .error errs =>
-      printErrors errs
-      printHelp c
+      printErrors errs .auto scheme
+      printHelp c .auto scheme
       return usageExit
 
 end Argus.Term

@@ -17,6 +17,8 @@ scripts. Nothing here is written twice.
 open Argus
 open TermColor
 
+private def demoScheme : ColorScheme := ColorScheme.catppuccin
+
 structure Opts where
   ignoreCase : Bool
   lineNumber : Bool
@@ -49,13 +51,13 @@ def main (argv : List String) : IO UInt32 := do
   -- --version, and --completions SHELL before parsing, reports every error to stderr at
   -- the real terminal width, and picks a color target from the environment.
   if !argv.isEmpty then
-    return ← Term.main grepish argv fun opts => do
+    return ← Term.main grepish argv (fun opts => do
       IO.println (repr opts)
-      return 0
+      return 0) (scheme := demoScheme)
 
   -- With none, show what one Command value produces.
   rule "COLORED HELP"
-  IO.print (Help.renderTo RenderTarget.ansi16 grepish)
+  IO.print (Help.renderTo RenderTarget.trueColor grepish 80 demoScheme)
 
   rule "A SUCCESSFUL PARSE"
   IO.println "argv: -i --jobs 4 needle src/a.lean src/b.lean"
@@ -67,7 +69,8 @@ def main (argv : List String) : IO UInt32 := do
   IO.println "argv: --jobs=12x --ignor-case needle"
   match grepish.run ["--jobs=12x", "--ignor-case", "needle"] with
   | .ok o => IO.println s!"unexpected success: {repr o}"
-  | .error es => IO.print (Text.render RenderTarget.ansi16 (Help.renderErrors es))
+  | .error es => do
+      IO.print (Text.render RenderTarget.trueColor (Help.renderErrors es demoScheme))
 
   rule "BASH COMPLETIONS"
   IO.print (Completions.bash grepish)
