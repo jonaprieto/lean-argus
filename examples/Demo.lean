@@ -53,7 +53,7 @@ private def runOpts (opts : Opts) : IO UInt32 := do
 private def demo : IO UInt32 := do
   -- With no arguments, show what one Command value produces.
   rule "COLORED HELP"
-  IO.print (Help.renderTo RenderTarget.trueColor grepish 80 demoScheme)
+  IO.print (Help.renderTo RenderTarget.trueColor grepish 80 demoScheme (includeGlobals := true))
 
   rule "A SUCCESSFUL PARSE"
   IO.println "argv: -i --jobs 4 needle src/a.lean src/b.lean"

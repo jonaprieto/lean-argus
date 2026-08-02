@@ -488,8 +488,9 @@ private def helpChecks : List (Option String) :=
   , check "help uses the supplied color scheme"
       (hasSubstr themed "38;2;174;129;255"
         && hasSubstr typedThemed "38;2;253;151;31")
-  , check "help can show terminal global options"
-      (hasSubstr globals "--completions" && hasSubstr globals "SHELL")
+  , check "help can show terminal global flags"
+      (hasSubstr globals "\nFLAGS\n-h, --help"
+        && hasSubstr globals "--completions SHELL")
   ]
 
 def main : IO UInt32 := do
