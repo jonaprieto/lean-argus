@@ -102,12 +102,18 @@ jobs:
           build-args: "Argus Argus.Term Argus.Properties tests demo readme completion-fixture"
       - name: Run the test suite
         run: ./.lake/build/bin/tests
+      # ubuntu-latest ships bash only. Without these the shell checks below silently
+      # degrade to "command not found", which is exit 127 rather than a real verdict.
+      - name: Install the shells the completions target
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zsh fish
       - name: Generated completion scripts must be valid shell
         run: |
           ./.lake/build/bin/demo --completions bash > /tmp/c.bash
           ./.lake/build/bin/demo --completions zsh  > /tmp/c.zsh
+          ./.lake/build/bin/demo --completions fish > /tmp/c.fish
           bash -n /tmp/c.bash
           zsh -n /tmp/c.zsh
+          fish -n /tmp/c.fish
       # Asserting on the script's text cannot tell you whether a shell offers the right
       # words. This sources it and drives COMP_WORDS at three depths.
       - name: Completions must offer the right words at each depth
