@@ -20,7 +20,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # persist-credentials: false is load-bearing. checkout otherwise writes its own
+      # GITHUB_TOKEN into http.https://github.com/.extraheader, and that header overrides
+      # the credentials in a rewritten URL. GITHUB_TOKEN can only see this repository, so
+      # every private dependency comes back as "Repository not found" even when the PAT
+      # in the secret has access to all of them.
       - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
       # Every dependency is private: grip, termcolor, termcolor-layout,
       # termcolor-terminal. The credential is set here and left in place; removing it
       # in this same step would leave the build unauthenticated.
@@ -74,6 +81,8 @@ jobs:
             echo "::error::The token is valid but cannot read every dependency. A fine-grained PAT needs each repository selected explicitly."
             exit 1
           fi
+          git config --global --unset-all http."https://github.com/".extraheader || true
+          git config --unset-all http."https://github.com/".extraheader || true
           git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
           git ls-remote https://github.com/jonaprieto/grip.git HEAD >/dev/null
           echo "git clone path works through the credential rewrite"
