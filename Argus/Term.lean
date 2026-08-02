@@ -32,7 +32,7 @@ allows. -/
 def printHelp (c : Command α) (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
   let width ← Terminal.terminalWidth
-  TermColor.print (Help.render c width scheme) choice
+  TermColor.print (Help.render c width scheme (includeGlobals := true)) choice
 
 /-- Print errors to stderr. Diagnostics belong on stderr so `tool 2>/dev/null` still
 works and piping stdout stays clean. -/

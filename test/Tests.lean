@@ -476,6 +476,7 @@ private def helpChecks : List (Option String) :=
     (Spec.flag "jobs" none "Worker count" Param.nat)
   let typedThemed := TermColor.Text.render TermColor.RenderTarget.trueColor
     (Help.render typed 40 TermColor.ColorScheme.monokai)
+  let globals := (Help.render longCmd 40 (includeGlobals := true)).plainText
   [ check "no line has trailing whitespace"
       (lines.all fun l => !l.endsWith " ")
   , check "the long description wraps onto more than one line"
@@ -487,6 +488,8 @@ private def helpChecks : List (Option String) :=
   , check "help uses the supplied color scheme"
       (hasSubstr themed "38;2;174;129;255"
         && hasSubstr typedThemed "38;2;253;151;31")
+  , check "help can show terminal global options"
+      (hasSubstr globals "--completions" && hasSubstr globals "SHELL")
   ]
 
 def main : IO UInt32 := do

@@ -11,7 +11,9 @@ import TermColor.ColorScheme
 /-!
 # Argus.Help: colored help, derived from the spec
 
-Help is computed from `Spec.toMeta`, never written alongside it, so the two cannot drift.
+Command-specific help is computed from `Spec.toMeta`, never written alongside it, so the two
+cannot drift. The optional `GLOBAL OPTIONS` block documents the controls provided by
+`Argus.Term`.
 That is what makes `help_sound` provable.
 
 Semantic styles use `ColorScheme.catppuccin` by default; callers can supply another
@@ -91,6 +93,16 @@ private def argLabel (scheme : ColorScheme) (a : ArgInfo) : Text :=
 private def subcommandLabel (scheme : ColorScheme) (name : String) : Text :=
   Text.styled name (commandStyle scheme)
 
+private def globalOptions (scheme : ColorScheme) : List (Text × Text) :=
+  [ (Text.styled "-h, --help" (flagStyle scheme),
+      Text.styled "Show this help page" (descriptionStyle scheme))
+  , (Text.styled "--version" (flagStyle scheme),
+      Text.styled "Show the command version" (descriptionStyle scheme))
+  , (Text.styled "--completions" (flagStyle scheme) ++
+      Text.styled " SHELL" (typeStyle scheme),
+      Text.styled "Print a shell completion script" (descriptionStyle scheme))
+  ]
+
 private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
   let command := Text.styled c.name (commandStyle scheme)
   match c.body with
@@ -104,9 +116,9 @@ private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
         (argStyle scheme)
     command ++ flags ++ args
 
-/-- Render a command's help page. -/
+/-- Render a command's help page. `includeGlobals` adds the standard `Argus.Term` controls. -/
 def render (c : Command α) (width : Nat := 80)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : Text :=
+    (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false) : Text :=
   let version := match c.version with
     | some v => " " ++ v
     | none => ""
@@ -129,12 +141,15 @@ def render (c : Command α) (width : Nat := 80)
         (rows width (children.map fun child =>
           (subcommandLabel scheme child.name,
             Text.styled child.description (descriptionStyle scheme))))
-  header ++ block scheme "USAGE" (nl (Text.plain "  " ++ usageText scheme c)) ++ body
+  let globals := if includeGlobals then
+      block scheme "GLOBAL OPTIONS" (rows width (globalOptions scheme))
+    else Text.empty
+  header ++ block scheme "USAGE" (nl (Text.plain "  " ++ usageText scheme c)) ++ globals ++ body
 
 /-- Render to a string for a known target. -/
 def renderTo (target : RenderTarget) (c : Command α) (width : Nat := 80)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : String :=
-  Text.render target (render c width scheme)
+    (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false) : String :=
+  Text.render target (render c width scheme includeGlobals)
 
 /-- Render errors as a styled block, one per line. -/
 def renderErrors (errs : List Err)
