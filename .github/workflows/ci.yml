@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Lean style (100-col / trailing-ws / tabs)
+        run: python3 scripts/style-check.py
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      # Every dependency is private: grip, termcolor, termcolor-layout,
+      # termcolor-terminal. The credential is set here and left in place; removing it
+      # in this same step would leave the build unauthenticated.
+      #
+      # `secrets` is not available to `if:` expressions -- using it there is a workflow
+      # validation error that produces zero jobs and a failing run that never built
+      # anything. `test -n` is the guard instead.
+      - name: Authenticate private Lake dependencies
+        env:
+          TERMCOLOR_READ_TOKEN: ${{ secrets.TERMCOLOR_READ_TOKEN }}
+        run: |
+          test -n "$TERMCOLOR_READ_TOKEN"
+          git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
+      - name: Cache elan toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.elan
+          key: elan-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lakefile.lean', 'lean-toolchain') }}
+          restore-keys: lake-${{ runner.os }}-
+      - uses: leanprover/lean-action@v1
+        with:
+          build-args: "Argus Argus.Term tests demo"
+      - name: Run the test suite
+        run: ./.lake/build/bin/tests
+      - name: Generated completion scripts must be valid shell
+        run: |
+          ./.lake/build/bin/demo --completions bash > /tmp/c.bash
+          ./.lake/build/bin/demo --completions zsh  > /tmp/c.zsh
+          bash -n /tmp/c.bash
+          zsh -n /tmp/c.zsh
