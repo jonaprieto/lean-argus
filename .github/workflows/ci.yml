@@ -47,7 +47,7 @@ jobs:
           restore-keys: lake-${{ runner.os }}-
       - uses: leanprover/lean-action@v1
         with:
-          build-args: "Argus Argus.Term tests demo"
+          build-args: "Argus Argus.Term Argus.Properties tests demo"
       - name: Run the test suite
         run: ./.lake/build/bin/tests
       - name: Generated completion scripts must be valid shell

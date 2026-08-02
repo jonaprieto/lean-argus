@@ -15,11 +15,32 @@ on failure; `main` prints failures and exits non-zero.
 
 open Argus
 
+argus_opts MacroOpts where
+  verbose : Bool := Spec.switch "verbose" (some 'v') "Chatty output";
+  jobs : Nat := Spec.flag "jobs" none "Worker count" Param.nat;
+  files : List String := Spec.many (Spec.arg "FILE" "Input" Param.path)
+
 private def check (name : String) (ok : Bool) : Option String :=
   if ok then none else some name
 
 private def hasSubstr (hay needle : String) : Bool :=
   (hay.splitOn needle).length > 1
+
+private def macroOptsChecks : List (Option String) :=
+  let parse (argv : List String) : Option (Bool × Nat × List String) :=
+    match Argus.run MacroOpts.spec argv with
+    | .ok o => some (o.verbose, o.jobs, o.files)
+    | .error _ => none
+  [ check "argus_opts parses attached values and many positionals"
+      (parse ["--verbose", "--jobs=4", "a.txt", "b.txt"] ==
+        some (true, 4, ["a.txt", "b.txt"]))
+  , check "argus_opts parses separate values and switch defaults"
+      (parse ["--jobs", "2"] == some (false, 2, []))
+  , check "argus_opts preserves declaration order in the result"
+      (parse ["--jobs=3", "input"] == some (false, 3, ["input"]))
+  , check "argus_opts metadata follows declaration order"
+      (MacroOpts.spec.flagNames == ["verbose", "jobs"])
+  ]
 
 /-! ### Param -/
 
@@ -368,6 +389,13 @@ private def subcommandChecks : List (Option String) :=
       (hasSubstr leafBash "--force" && hasSubstr leafZsh "--force" && hasSubstr leafFish "force")
   ]
 
+private def completionSafetyChecks : List (Option String) :=
+  [ check "completion safety rejects shell metacharacters"
+      (!Completions.isSafeName "$" && !Completions.isSafeName "`"
+        && !Completions.isSafeName "'" && !Completions.isSafeName ";"
+        && !Completions.isSafeName " ")
+  ]
+
 /-! ### Help rendering -/
 
 private def longCmd :=
@@ -395,9 +423,11 @@ private def helpChecks : List (Option String) :=
 
 def main : IO UInt32 := do
   let results :=
-    paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks ++ leftoverChecks
+    macroOptsChecks ++ paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks
+      ++ leftoverChecks
       ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks
       ++ subcommandChecks ++ resolveChecks
+      ++ completionSafetyChecks
       ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then

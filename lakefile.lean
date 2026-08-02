@@ -28,12 +28,16 @@ than globbed so that adding a module cannot silently widen what a consumer links
 @[default_target]
 lean_lib «Argus» where
   globs := #[.one `Argus, .one `Argus.Param, .one `Argus.Spec, .one `Argus.Runner,
-             .one `Argus.Command, .one `Argus.Help, .one `Argus.Completions]
+             .one `Argus.Command, .one `Argus.Help, .one `Argus.Completions,
+             .one `Argus.Macro]
 
 /-- The IO layer, opt-in. Adds termcolor-terminal. A consumer that only parses, or that
 renders to a fixed width, never imports this and never links it. -/
 lean_lib «Argus.Term» where
   globs := #[.one `Argus.Term]
+
+lean_lib «Argus.Properties» where
+  globs := #[.one `Argus.Properties]
 
 lean_exe «demo» where
   root := `Demo

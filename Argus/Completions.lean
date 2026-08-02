@@ -60,7 +60,7 @@ private def subcommandNames (c : Command α) : List String :=
   | .subs children => children.map (·.name) |>.filter isSafeName
 
 private def safeName (c : Command α) : String :=
-  String.mk (c.name.toList.map fun ch => if isSafeName ch.toString then ch else '_')
+  String.ofList (c.name.toList.map fun ch => if isSafeName ch.toString then ch else '_')
 
 /-! ### bash -/
 

@@ -45,8 +45,8 @@ private def rows (width : Nat) (items : List (Text × Text)) : Text :=
   let labelWidth := items.foldl (fun acc it => max acc it.1.width) 0
   let gap := 2
   let descWidth := if width > labelWidth + gap + 4 then width - labelWidth - gap else 20
-  let indent := Text.plain (String.mk (List.replicate (labelWidth + gap) ' '))
-  let sep := Text.plain (String.mk (List.replicate gap ' '))
+  let indent := Text.plain (String.ofList (List.replicate (labelWidth + gap) ' '))
+  let sep := Text.plain (String.ofList (List.replicate gap ' '))
   Layout.joinLines (items.map fun (label, desc) =>
     match Layout.splitLines (Layout.wrapLines descWidth desc) with
     | [] => label
