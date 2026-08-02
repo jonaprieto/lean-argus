@@ -83,7 +83,9 @@ def main (argv : List String) : IO UInt32 :=
 respects `NO_COLOR`, and exits `2` on a usage error.
 
 No grade is ever written by hand. Building the spec with the combinators directly works
-too, if you would rather not use the macro.
+too, if you would rather not use the macro; the explicit form uses the existing `<*>`
+operator. `Spec` is applicative rather than monadic, so `do` notation is not the right tool
+for assembling a spec.
 
 ## Subcommands
 
