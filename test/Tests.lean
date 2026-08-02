@@ -44,11 +44,109 @@ private def paramChecks : List (Option String) :=
       ((Param.nat.map (· * 2)).decode "21" matches .ok 42)
   ]
 
+private def newParamChecks : List (Option String) :=
+  [ check "int accepts a leading minus"
+      (Param.int.decode "-42" matches .ok (-42 : Int))
+  , check "int rejects trailing junk"
+      (Param.int.decode "+42x" matches .error _)
+  , check "bool is case-insensitive"
+      (Param.bool.decode "TrUe" matches .ok true)
+  , check "bool rejects unknown words"
+      (Param.bool.decode "maybe" matches .error _)
+  , check "duration converts every unit to seconds"
+      (Param.duration.decode "1d2h3m4s" matches .ok 93784)
+  , check "duration accepts bare seconds"
+      (Param.duration.decode "90" matches .ok 90)
+  , check "duration rejects an unknown unit"
+      (Param.duration.decode "2x" matches .error _)
+  , check "bytes converts decimal fractions"
+      (Param.bytes.decode "1.5M" matches .ok 1500000)
+  , check "bytes converts binary units and ignores B"
+      (Param.bytes.decode "2GiB" matches .ok 2147483648)
+  , check "bytes rejects an unknown suffix"
+      (Param.bytes.decode "10MBx" matches .error _)
+  , check "range accepts ordered bounds"
+      (Param.range.decode "10..20" matches .ok (10, 20))
+  , check "range rejects reversed bounds"
+      (Param.range.decode "20..10" matches .error _)
+  , check "csv decodes comma-separated values"
+      ((Param.csv Param.nat).decode "1,2,3" matches .ok [1, 2, 3])
+  , check "csv rejects an empty element"
+      ((Param.csv Param.nat).decode "1,,3" matches .error _)
+  , check "enum returns the selected value"
+      ((Param.enum [("fast", 1), ("safe", 2)]).decode "safe" matches .ok 2)
+  , check "enum is exact and case-sensitive"
+      ((Param.enum [("fast", 1), ("safe", 2)]).decode "SAFE" matches .error _)
+  , check "enum errors list accepted names"
+      (match (Param.enum [("fast", 1), ("safe", 2)]).decode "slow" with
+       | .error e => hasSubstr e.message "fast" && hasSubstr e.message "safe"
+       | .ok _ => false)
+  ]
+
 /-- Error positions are columns within the value, not offsets into a joined argv. -/
 private def errorPositionCheck : Option String :=
   match Param.nat.decode "12x" with
   | .error e => check "error column points inside the value" (e.pos == 2)
   | .ok _ => some "expected a failure on 12x"
+
+/-! ### Spec backtracking -/
+
+private def constThenArgSpec :=
+  Spec.map2 (fun (n : Nat) (s : String) => (n, s))
+    (Spec.const 7)
+    (Spec.arg "TEXT" "Text" Param.str)
+
+private def optNatThenTextSpec :=
+  Spec.map2 (fun (n : Option Nat) (s : String) => (n, s))
+    (Spec.opt (Spec.arg "NUMBER" "Number" Param.nat))
+    (Spec.arg "TEXT" "Text" Param.str)
+
+private def optFlagSpec :=
+  Spec.opt (Spec.flag "mode" none "Mode" Param.str)
+
+private def altLeftSpec :=
+  Spec.alt (Spec.const "left") (Spec.const "right")
+
+private def altFallbackSpec :=
+  Spec.alt
+    (Spec.map (fun (_ : Nat) => "left") (Spec.arg "NUMBER" "Number" Param.nat))
+    (Spec.arg "TEXT" "Text" Param.str)
+
+private def altThenArgSpec :=
+  Spec.map2 (fun (s : String) (t : String) => (s, t))
+    (Spec.alt
+      (Spec.map (fun (_ : Nat) => "number") (Spec.arg "NUMBER" "Number" Param.nat))
+      (Spec.const "fallback"))
+    (Spec.arg "TEXT" "Text" Param.str)
+
+private def specChecks : List (Option String) :=
+  [ check "const returns its value"
+      (Argus.run (Spec.const 7) [] matches .ok 7)
+  , check "const consumes nothing before a positional"
+      (Argus.run constThenArgSpec ["text"] matches .ok (7, "text"))
+  , check "opt yields none on failure without an error"
+      (Argus.run (Spec.opt (Spec.arg "NUMBER" "Number" Param.nat)) [] matches .ok none)
+  , check "opt restores a failed positional for a later arg"
+      (Argus.run optNatThenTextSpec ["text"] matches .ok (none, "text"))
+  , check "opt yields some and consumes on success"
+      (Argus.run optNatThenTextSpec ["7", "text"] matches .ok (some 7, "text"))
+  , check "opt over a flag yields none when absent"
+      (Argus.run optFlagSpec [] matches .ok none)
+  , check "opt over a flag yields some when present"
+      (Argus.run optFlagSpec ["--mode=fast"] matches .ok (some "fast"))
+  , check "alt takes the left branch on success"
+      (Argus.run altLeftSpec [] matches .ok "left")
+  , check "alt falls back to the right branch"
+      (Argus.run altFallbackSpec ["text"] matches .ok "text")
+  , check "alt does not leak left branch errors"
+      (match Argus.run altFallbackSpec ["text"] with
+       | .ok "text" => true
+       | _ => false)
+  , check "alt restores a failed positional for its right branch"
+      (Argus.run altFallbackSpec ["text"] matches .ok "text")
+  , check "alt restores a failed positional for a later arg"
+      (Argus.run altThenArgSpec ["text", "later"] matches .ok ("fallback", "text"))
+  ]
 
 /-! ### Edit distance (backs "did you mean") -/
 
@@ -179,8 +277,8 @@ private def helpChecks : List (Option String) :=
 
 def main : IO UInt32 := do
   let results :=
-    paramChecks ++ [errorPositionCheck] ++ editDistanceChecks ++ metaChecks
-      ++ runnerChecks ++ messageChecks ++ helpChecks
+    paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks
+      ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks ++ helpChecks
   let failures := results.filterMap id
   if failures.isEmpty then
     IO.println s!"all {results.length} checks passed"
