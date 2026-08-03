@@ -85,7 +85,7 @@ jobs:
           git config --global --unset-all http."https://github.com/".extraheader || true
           git config --unset-all http."https://github.com/".extraheader || true
           git config --global url."https://x-access-token:${TERMCOLOR_READ_TOKEN}@github.com/".insteadOf "https://github.com/"
-          git ls-remote https://github.com/jonaprieto/grip.git HEAD >/dev/null
+          git ls-remote https://github.com/jonaprieto/lean-grip.git HEAD >/dev/null
           echo "git clone path works through the credential rewrite"
       - name: Cache elan toolchain
         uses: actions/cache@v6

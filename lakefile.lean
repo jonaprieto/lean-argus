@@ -7,7 +7,7 @@ package «argus» where
 
 -- Pinned by SHA: the grade algebra and parser semantics must not move underfoot.
 require grip from git
-  "https://github.com/jonaprieto/grip" @ "eb29a2331729a7087eab54838557e7490e802a29"
+  "https://github.com/jonaprieto/lean-grip" @ "eb29a2331729a7087eab54838557e7490e802a29"
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"

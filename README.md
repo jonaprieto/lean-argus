@@ -52,7 +52,7 @@ These packages form one focused stack:
 [`termcolor-widgets`](https://github.com/jonaprieto/lean-termcolor-widgets) →
 [`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal)
 
-Argus sits above it: [`grip`](https://github.com/jonaprieto/grip) supplies value grammars,
+Argus sits above it: [`grip`](https://github.com/jonaprieto/lean-grip) supplies value grammars,
 `Argus.Help` uses layout, and `Argus.Term` connects parsed commands to terminal output.
 Each package keeps its machine-checked properties in a separate build target.
 
@@ -134,7 +134,7 @@ someone later hopes to interpret.
 ## What it does differently
 
 **Flag values are grammars, and errors point inside them.** `Param` carries a
-[grip](https://github.com/jonaprieto/grip) parser over the value's bytes, so `--timeout`
+[grip](https://github.com/jonaprieto/lean-grip) parser over the value's bytes, so `--timeout`
 takes a duration rather than a string something later hopes to interpret.
 
 **Errors accumulate and point into bad values.** `ap` has no data dependency between its
