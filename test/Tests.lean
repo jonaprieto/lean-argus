@@ -203,6 +203,8 @@ private def resolveChecks : List (Option String) :=
       ((root.resolve ["inner", "leaf"]).name == "leaf")
   , check "flags are stepped over while resolving"
       ((root.resolve ["--verbose", "build", "--help"]).name == "build")
+  , check "valued global flags are stepped over while resolving"
+      ((root.resolve ["--completions", "bash", "build"]).name == "build")
   , check "an unknown name stops at the last good command"
       ((root.resolve ["nope", "leaf"]).name == "tool")
   , check "resolving past a leaf stops at the leaf"
@@ -462,10 +464,18 @@ private def completionContextChecks : List (Option String) :=
   ]
 
 private def completionSafetyChecks : List (Option String) :=
+  let quoted := Argus.cmd "quoted"
+    (Spec.map (fun (_ : Bool) => SubcommandResult.status true)
+      (Spec.switch "quoted" none "it's ] \\ $ (metadata)"))
+  let zsh := Completions.zsh quoted
+  let fish := Completions.fish quoted
   [ check "completion safety rejects shell metacharacters"
       (!Completions.isSafeName "$" && !Completions.isSafeName "`"
         && !Completions.isSafeName "'" && !Completions.isSafeName ";"
         && !Completions.isSafeName " ")
+  , check "completion metadata escapes shell syntax"
+      (hasSubstr zsh "\\]" && hasSubstr zsh "'\\''"
+        && hasSubstr fish "\\'")
   ]
 
 /-! ### Help rendering -/

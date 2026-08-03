@@ -37,12 +37,18 @@ def isSafeName (s : String) : Bool :=
   !s.isEmpty && s.all fun c =>
     c.isAlphanum || c == '-' || c == '_'
 
-private partial def invalidNames (c : Command α) : List String :=
-  match c.body with
-  | .opts _ => (c.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
-  | .subs children =>
+private def invalidNames (c : Command α) : List String :=
+  match c with
+  | ⟨_, _, _, .opts spec⟩ =>
+    (spec.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
+  | ⟨_, _, _, .subs children⟩ =>
     let childNames := children.map (·.name) |>.filter (fun n => !isSafeName n)
     childNames ++ children.flatMap fun child => invalidNames child
+termination_by sizeOf c
+decreasing_by
+  have h := List.sizeOf_lt_of_mem ‹child ∈ children›
+  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  omega
 
 /-- Names that would be unsafe to interpolate into a script. Empty means the command is
 safe to generate from. -/
@@ -75,14 +81,30 @@ private def safeName (c : Command α) : String :=
 private def commandTarget (c : Command α) : String :=
   if isSafeName c.name then c.name else "_" ++ safeName c
 
-private partial def nodes (path : List String) (c : Command α) :
+private def shellQuote (value : String) : String :=
+  "'" ++ value.replace "'" "'\\''" ++ "'"
+
+private def zshEscape (value : String) : String :=
+  (value.replace "\\" "\\\\").replace "]" "\\]"
+
+private def fishQuote (value : String) : String :=
+  "'" ++ (value.replace "\\" "\\\\").replace "'" "\\'" ++ "'"
+
+private def nodes (path : List String) (c : Command α) :
     List (List String × Command α) :=
-  let here := [(path, c)]
-  match c.body with
-  | .opts _ => here
-  | .subs children =>
-    let safeChildren := children.filter (fun child => isSafeName child.name)
-    here ++ safeChildren.flatMap fun child => nodes (path ++ [child.name]) child
+  match c with
+  | ⟨name, version, description, .opts spec⟩ =>
+    [(path, { name, version, description, body := .opts spec })]
+  | ⟨name, version, description, .subs children⟩ =>
+    let c := { name, version, description, body := .subs children }
+    let here := [(path, c)]
+    here ++ children.flatMap fun child =>
+      if isSafeName child.name then nodes (path ++ [child.name]) child else []
+termination_by sizeOf c
+decreasing_by
+  have h := List.sizeOf_lt_of_mem ‹child ∈ children›
+  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  omega
 
 private def pathKey (path : List String) : String :=
   " ".intercalate path
@@ -133,18 +155,19 @@ def bash (c : Command α) : String :=
 /-! ### zsh -/
 
 private def zshFlagSpec (f : FlagInfo) : String :=
-  let desc := f.help.replace "'" ""
+  let desc := zshEscape f.help
   let arg := match f.typeName with
     | none => ""
-    | some t => ":" ++ t.replace "'" "" ++ ":"
+    | some t => ":" ++ zshEscape t ++ ":"
   let short := f.short.bind fun ch =>
     if isSafeName ch.toString then some ch else none
-  match short with
-  | some ch =>
-    let s := ch.toString
-    "'(-" ++ s ++ " --" ++ f.long ++ ")'{-" ++ s ++ ",--" ++ f.long ++
-      "}'[" ++ desc ++ "]" ++ arg ++ "'"
-  | none => "'--" ++ f.long ++ "[" ++ desc ++ "]" ++ arg ++ "'"
+  let spec := match short with
+    | some ch =>
+      let s := ch.toString
+      "(-" ++ s ++ " --" ++ f.long ++ "){-" ++ s ++ ",--" ++ f.long ++
+        "}[" ++ desc ++ "]" ++ arg
+    | none => "--" ++ f.long ++ "[" ++ desc ++ "]" ++ arg
+  shellQuote spec
 
 private def zshFlagSpecs (c : Command α) : List String :=
   c.toMeta.flags.filter (fun f => isSafeName f.long) |>.map zshFlagSpec
@@ -163,7 +186,7 @@ private def zshBranchArm (path : List String) (c : Command α) : String :=
     | .opts _ => []
     | .subs children =>
       children.filter (fun child => isSafeName child.name) |>.map fun child =>
-        "'" ++ child.name ++ ":" ++ child.description.replace "'" "" ++ "'"
+        shellQuote (child.name ++ ":" ++ zshEscape child.description)
   "        \"" ++ pathKey path ++ "\")\n" ++
   "          choices=(" ++ " ".intercalate choices ++ ")\n" ++
   "          _describe 'subcommand' choices\n" ++
@@ -203,12 +226,17 @@ def zsh (c : Command α) : String :=
 
 /-! ### fish -/
 
-private partial def descendantNames (c : Command α) : List String :=
-  match c.body with
-  | .opts _ => []
-  | .subs children =>
-    let safeChildren := children.filter (fun child => isSafeName child.name)
-    safeChildren.flatMap fun child => [child.name] ++ descendantNames child
+private def descendantNames (c : Command α) : List String :=
+  match c with
+  | ⟨_, _, _, .opts _⟩ => []
+  | ⟨_, _, _, .subs children⟩ =>
+    children.flatMap fun child =>
+      if isSafeName child.name then [child.name] ++ descendantNames child else []
+termination_by sizeOf c
+decreasing_by
+  have h := List.sizeOf_lt_of_mem ‹child ∈ children›
+  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  omega
 
 private def fishCondition (path : List String) (c : Command α) : Option String :=
   match path with
@@ -225,14 +253,14 @@ private def fishCondition (path : List String) (c : Command α) : Option String 
 private def fishWhen (condition : Option String) : String :=
   match condition with
   | none => ""
-  | some value => " -n '" ++ value ++ "'"
+  | some value => " -n " ++ fishQuote value
 
 private def fishFlagLine (target : String) (when : String) (f : FlagInfo) : String :=
   let short := f.short.bind fun ch =>
     if isSafeName ch.toString then some (" -s " ++ ch.toString) else none
   let takesArg := if f.typeName.isSome then " -r" else ""
   "complete -c " ++ target ++ " -l " ++ f.long ++ (short.getD "") ++ takesArg ++ when ++
-    " -d '" ++ f.help.replace "'" "" ++ "'"
+    " -d " ++ fishQuote f.help
 
 private def fishNodeLines (target : String) (node : List String × Command α) : List String :=
   let path := node.1
@@ -247,7 +275,7 @@ private def fishNodeLines (target : String) (node : List String × Command α) :
   | .subs _ =>
     let names := " ".intercalate (subcommandNames c)
     if names.isEmpty then []
-    else ["complete -c " ++ target ++ " -f" ++ when ++ " -a '" ++ names ++ "'"]
+    else ["complete -c " ++ target ++ " -f" ++ when ++ " -a " ++ fishQuote names]
 
 /-- fish completions use command-line conditions for every safe node in the tree. -/
 def fish (c : Command α) : String :=

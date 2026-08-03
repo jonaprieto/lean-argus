@@ -43,49 +43,64 @@ namespace Command
 
 variable {α : Type}
 
-private def firstPositional : List String → Option (String × List String)
-  | [] => none
-  | arg :: rest =>
-    if arg.startsWith "-" then
-      match firstPositional rest with
-      | none => none
-      | some (name, remaining) => some (name, arg :: remaining)
-    else some (arg, rest)
+private def globalFlagTakesValue (arg : String) : Bool :=
+  arg == "--completions" || arg.startsWith "--completions="
 
-private def suggest (known : List String) (given : String) : Option String :=
-  let scored := known.map (fun k => (editDistance k given, k))
-  match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
-  | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
+private def firstPositional (argv : List String) : Option (String × List String) :=
+  let rec go : Nat → List String → Option (String × List String)
+    | 0, _ => none
+    | _, [] => none
+    | _ + 1, "--" :: rest =>
+      match rest with
+      | [] => none
+      | arg :: remaining => some (arg, remaining)
+    | fuel + 1, arg :: rest =>
+      if arg.startsWith "-" then
+        let remaining := if globalFlagTakesValue arg then rest.drop 1 else rest
+        match go fuel remaining with
+        | none => none
+        | some (name, remaining) => some (name, arg :: remaining)
+      else some (arg, rest)
+  go (argv.length + 1) argv
 
 /-- Parse argv against this command's spec. -/
-partial def run (c : Command α) (argv : List String) : Except (List Err) α :=
-  match c.body with
-  | .opts spec => Argus.run spec argv
-  | .subs children =>
-    let available := children.map (·.name)
-    match firstPositional argv with
-    | none => .error [.missingSubcommand c.name available]
-    | some (given, remaining) =>
-      match children.find? (·.name == given) with
-      | some child => run child remaining
-      | none => .error [.unknownSubcommand given (suggest available given)]
+def run (c : Command α) (argv : List String) : Except (List Err) α :=
+  let rec go : Nat → Command α → List String → Except (List Err) α
+    | 0, _, _ => .error [.custom "command nesting exceeded"]
+    | fuel + 1, c, argv =>
+      match c.body with
+      | .opts spec => Argus.run spec argv
+      | .subs children =>
+        let available := children.map (·.name)
+        match firstPositional argv with
+        | none => .error [.missingSubcommand c.name available]
+        | some (given, remaining) =>
+          match children.find? (·.name == given) with
+          | some child => go fuel child remaining
+          | none => .error [.unknownSubcommand given (suggest available given)]
+  go (argv.length + 1) c argv
 
 /-- Follow subcommand names as far as they match, returning the deepest command reached.
 
 Flags are stepped over, so `tool --verbose build --help` still resolves to `build`. An
 unrecognised name stops the walk and yields the last good command, which is what a user
 asking for help after a typo should see. -/
-partial def resolve (c : Command α) : List String → Command α
-  | [] => c
-  | a :: rest =>
-    if a.startsWith "-" then resolve c rest
-    else
-      match c.body with
-      | .opts _ => c
-      | .subs children =>
-        match children.find? (·.name == a) with
-        | some child => resolve child rest
-        | none => c
+def resolve (c : Command α) (argv : List String) : Command α :=
+  let rec go : Nat → Command α → List String → Command α
+    | 0, c, _ => c
+    | _, c, [] => c
+    | fuel + 1, c, a :: rest =>
+      if a.startsWith "-" then
+        let remaining := if globalFlagTakesValue a then rest.drop 1 else rest
+        go fuel c remaining
+      else
+        match c.body with
+        | .opts _ => c
+        | .subs children =>
+          match children.find? (·.name == a) with
+          | some child => go fuel child rest
+          | none => c
+  go (argv.length + 1) c argv
 
 /-- The command's erased metadata. -/
 def toMeta (c : Command α) : Meta :=

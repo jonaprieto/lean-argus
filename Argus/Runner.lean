@@ -86,32 +86,36 @@ property pays for itself.
 
 Short flags are recorded under their single-character name; the interpreter resolves
 them against the spec's short names. Everything after a bare `--` is positional. -/
-partial def tokenize (takesValue : String → Bool) (argv : List String) : Tokens :=
-  go argv { flags := [], positionals := [] }
+def tokenize (takesValue : String → Bool) (argv : List String) : Tokens :=
+  go (argv.length + 1) argv { flags := [], positionals := [] }
 where
-  go : List String → Tokens → Tokens
-  | [], acc => { flags := acc.flags.reverse, positionals := acc.positionals.reverse }
-  | "--" :: rest, acc =>
+  go : Nat → List String → Tokens → Tokens
+  | 0, _, acc => { flags := acc.flags.reverse, positionals := acc.positionals.reverse }
+  | _, [], acc => { flags := acc.flags.reverse, positionals := acc.positionals.reverse }
+  | _ + 1, "--" :: rest, acc =>
     { flags := acc.flags.reverse, positionals := acc.positionals.reverse ++ rest }
-  | a :: rest, acc =>
+  | fuel + 1, a :: rest, acc =>
     if a.startsWith "--" then
       let (name, val) := splitEq (a.drop 2).toString
-      match val, rest with
-      | none, v :: more =>
-        if takesValue name && !v.startsWith "-" then
-          go more { acc with flags := (name, some v, a) :: acc.flags }
-        else go rest { acc with flags := (name, none, a) :: acc.flags }
-      | _, _ => go rest { acc with flags := (name, val, a) :: acc.flags }
+      match val with
+      | some value => go fuel rest { acc with flags := (name, some value, a) :: acc.flags }
+      | none =>
+        match rest with
+        | v :: more =>
+          if takesValue name && !v.startsWith "-" then
+            go fuel more { acc with flags := (name, some v, a) :: acc.flags }
+          else go fuel (v :: more) { acc with flags := (name, none, a) :: acc.flags }
+        | [] => go fuel [] { acc with flags := (name, none, a) :: acc.flags }
     else if a.startsWith "-" && a.length > 1 then
       let name := (a.drop 1).toString
       match rest with
       | v :: more =>
         if takesValue name && !v.startsWith "-" then
-          go more { acc with flags := (name, some v, a) :: acc.flags }
-        else go rest { acc with flags := (name, none, a) :: acc.flags }
-      | [] => go rest { acc with flags := (name, none, a) :: acc.flags }
+          go fuel more { acc with flags := (name, some v, a) :: acc.flags }
+        else go fuel (v :: more) { acc with flags := (name, none, a) :: acc.flags }
+      | [] => go fuel [] { acc with flags := (name, none, a) :: acc.flags }
     else
-      go rest { acc with positionals := a :: acc.positionals }
+      go fuel rest { acc with positionals := a :: acc.positionals }
 
 /-! ### Interpreting -/
 
@@ -129,19 +133,21 @@ def editDistance (a b : String) : Nat :=
   let bs := b.toList
   let init : List Nat := List.range (bs.length + 1)
   let final := a.toList.foldl (fun prev ac =>
-    let (cur, _) := bs.foldl (fun (acc : List Nat × Nat) bc =>
-      let (cur, j) := acc
+    let first := prev.headD 0 + 1
+    let (cur, _, _) := bs.foldl (fun (acc : List Nat × Nat × Nat) bc =>
+      let (row, left, j) := acc
       let cost := if ac == bc then 0 else 1
-      let insert := cur.getLastD 0 + 1
+      let insert := left + 1
       let delete := prev.getD (j + 1) 0 + 1
       let substitute := prev.getD j 0 + cost
-      (cur ++ [min insert (min delete substitute)], j + 1))
-      ([prev.headD 0 + 1], 0)
-    cur) init
+      let value := min insert (min delete substitute)
+      (value :: row, value, j + 1))
+      ([first], first, 0)
+    cur.reverse) init
   final.getLastD 0
 
 /-- Closest known flag name, when it is close enough to be worth suggesting. -/
-private def suggest (known : List String) (given : String) : Option String :=
+def suggest (known : List String) (given : String) : Option String :=
   let scored := known.map (fun k => (editDistance k given, k))
   match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
   | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
@@ -169,21 +175,21 @@ def interp : {g : Grade} → {α : Type} → Spec g α → St → Option α × S
     | (some _, st) => (some true, st)
   | _, _, .flag l s _ p, st =>
     match takeFlag st l s with
-    | (none, st) => (none, { st with errors := st.errors ++ [.missingFlag l] })
+    | (none, st) => (none, { st with errors := .missingFlag l :: st.errors })
     | (some (none, _), st) =>
-      (none, { st with errors := st.errors ++ [.flagNeedsValue l] })
+      (none, { st with errors := .flagNeedsValue l :: st.errors })
     | (some (some v, _), st) =>
       match p.decode v with
       | .ok a => (some a, st)
-      | .error e => (none, { st with errors := st.errors ++ [.badValue l v e] })
+      | .error e => (none, { st with errors := .badValue l v e :: st.errors })
   | _, _, .arg n _ p, st =>
     match st.positionals with
-    | [] => (none, { st with errors := st.errors ++ [.missingArg n] })
+    | [] => (none, { st with errors := .missingArg n :: st.errors })
     | v :: rest =>
       let st := { st with positionals := rest }
       match p.decode v with
       | .ok a => (some a, st)
-      | .error e => (none, { st with errors := st.errors ++ [.badValue n v e] })
+      | .error e => (none, { st with errors := .badValue n v e :: st.errors })
   | _, _, .ap f x, st =>
     -- Both sides run, so independent failures are all reported in one pass.
     let (fv, st) := interp f st
@@ -214,11 +220,11 @@ def interp : {g : Grade} → {α : Type} → Spec g α → St → Option α × S
           match interp x st with
           | (some a, st') =>
             if st'.flags.length + st'.positionals.length < before then
-              (xs ++ [a], st', false)
+              (a :: xs, st', false)
             else (xs, st, true)
           | (none, _) => (xs, st, true))
       ([], st, false)
-    (some acc, st)
+    (some acc.reverse, st)
 
 /-- Parse argv against a spec. Returns the value, or every error found. -/
 def run {g : Grade} {α : Type} (s : Spec g α) (argv : List String) : Except (List Err) α :=
@@ -238,7 +244,7 @@ def run {g : Grade} {α : Type} (s : Spec g α) (argv : List String) : Except (L
   let leftoverFlags := st.flags.map (fun (n, _, spelling) =>
     Err.unknownFlag spelling (suggest known n))
   let leftoverArgs := st.positionals.map Err.unexpectedArg
-  match v, st.errors ++ leftoverFlags ++ leftoverArgs with
+  match v, st.errors.reverse ++ leftoverFlags ++ leftoverArgs with
   | some a, [] => .ok a
   | _, errs => .error (if errs.isEmpty then [Err.custom "parse failed"] else errs)
 
