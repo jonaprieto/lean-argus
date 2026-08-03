@@ -7,11 +7,11 @@ package «argus» where
 
 -- Pinned by SHA: the grade algebra and parser semantics must not move underfoot.
 require grip from git
-  "https://github.com/jonaprieto/lean-grip" @ "eb29a2331729a7087eab54838557e7490e802a29"
+  "https://github.com/jonaprieto/lean-grip" @ "00e7a25"
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"
-  @ "ac9a102562fa65435365758cf5fe5ac95c6a7a92"
+  @ "7c00b61"
 
 require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
@@ -19,7 +19,7 @@ require «termcolor-layout» from git
 
 require «termcolor-diagnostics» from git
   "https://github.com/jonaprieto/lean-termcolor-diagnostics.git"
-  @ "315f84249c6c9874221ec20f419ad03f6c339815"
+  @ "96f51db"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
