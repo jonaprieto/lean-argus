@@ -16,6 +16,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Lean style (100-col / trailing-ws / tabs)
         run: python3 scripts/style-check.py
+      - name: Validate README artwork
+        run: xmllint --noout assets/*.svg
 
   build:
     runs-on: ubuntu-latest
@@ -86,12 +88,12 @@ jobs:
           git ls-remote https://github.com/jonaprieto/grip.git HEAD >/dev/null
           echo "git clone path works through the credential rewrite"
       - name: Cache elan toolchain
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.elan
           key: elan-${{ runner.os }}-${{ hashFiles('lean-toolchain') }}
       - name: Cache build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .lake
           key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lakefile.lean', 'lean-toolchain') }}
