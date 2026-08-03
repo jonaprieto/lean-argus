@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">Argus accumulated command errors</title>
+  <desc id="desc">A terminal showing multiple typed command errors with source locations and a typo suggestion.</desc>
+  <rect width="1200" height="560" rx="20" fill="#1e1e2e"/>
+  <rect width="1200" height="58" rx="20" fill="#292b3b"/><rect y="38" width="1200" height="20" fill="#292b3b"/>
+  <circle cx="32" cy="29" r="8" fill="#f38ba8"/><circle cx="58" cy="29" r="8" fill="#f9e2af"/><circle cx="84" cy="29" r="8" fill="#a6e3a1"/>
+  <text x="116" y="36" fill="#cba6f7" font-family="SFMono-Regular,Menlo,monospace" font-size="20" font-weight="700">argus · structured errors</text>
+  <rect x="40" y="92" width="1120" height="420" rx="16" fill="#181825" stroke="#45475a" stroke-width="2"/>
+  <text x="72" y="132" fill="#a6adc8" font-family="SFMono-Regular,Menlo,monospace" font-size="17">argv: --jobs=12x --ignor-case needle</text>
+  <text x="72" y="178" fill="#f38ba8" font-family="SFMono-Regular,Menlo,monospace" font-size="21" font-weight="700">error</text><text x="145" y="178" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="21">: invalid value for '--jobs'</text>
+  <text x="96" y="212" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">╰─&gt; value for --jobs:1:3</text>
+  <text x="96" y="250" fill="#a6adc8" font-family="SFMono-Regular,Menlo,monospace" font-size="18">1 │ 12x</text><text x="198" y="280" fill="#f38ba8" font-family="SFMono-Regular,Menlo,monospace" font-size="18">^^</text><text x="254" y="280" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">expected a natural number</text>
+  <text x="72" y="336" fill="#f38ba8" font-family="SFMono-Regular,Menlo,monospace" font-size="21" font-weight="700">error</text><text x="145" y="336" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="21">: unknown flag '--ignor-case'</text>
+  <text x="96" y="372" fill="#a6e3a1" font-family="SFMono-Regular,Menlo,monospace" font-size="18">help</text><text x="150" y="372" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">: did you mean '--ignore-case'?</text>
+  <text x="72" y="438" fill="#f38ba8" font-family="SFMono-Regular,Menlo,monospace" font-size="21" font-weight="700">error</text><text x="145" y="438" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="21">: missing required argument '&lt;FILE&gt;'</text>
+  <text x="72" y="480" fill="#6c7086" font-family="SFMono-Regular,Menlo,monospace" font-size="16">independent failures accumulate in one pass</text>
+</svg>

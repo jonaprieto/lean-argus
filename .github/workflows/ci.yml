@@ -122,7 +122,7 @@ jobs:
           bash -n /tmp/t.bash
           comp() {
             ( source /tmp/t.bash
-              COMP_WORDS=($1); COMP_CWORD=$2
+              read -r -a COMP_WORDS <<< "$1"; COMP_CWORD=$2
               _tool_completions
               printf '%s ' "${COMPREPLY[@]}" )
           }
