@@ -313,6 +313,15 @@ private def messageChecks : List (Option String) :=
       ((firstErr ["--zzzzzzz=2", "needle", "--jobs=1"]).endsWith "unknown flag '--zzzzzzz=2'")
   ]
 
+private def diagnosticChecks : List (Option String) :=
+  let rendered := match Argus.run optsSpec ["--jobs=12x", "needle"] with
+    | .ok _ => ""
+    | .error errs => (Help.renderErrors errs).plainText
+  [ check "value errors render a source location" (hasSubstr rendered "value for --jobs")
+  , check "value errors preserve the given value" (hasSubstr rendered "12x")
+  , check "value errors render a marker" (hasSubstr rendered "^")
+  ]
+
 /-! ### Subcommands -/
 
 inductive SubcommandResult where
@@ -498,6 +507,7 @@ def main : IO UInt32 := do
     macroOptsChecks ++ paramChecks ++ newParamChecks ++ [errorPositionCheck] ++ specChecks
       ++ leftoverChecks
       ++ editDistanceChecks ++ metaChecks ++ runnerChecks ++ messageChecks
+      ++ diagnosticChecks
       ++ subcommandChecks ++ resolveChecks
       ++ completionContextChecks
       ++ completionSafetyChecks

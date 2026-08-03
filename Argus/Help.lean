@@ -5,6 +5,7 @@ Authors: Jonathan Cubides
 -/
 
 import Argus.Command
+import Argus.Diagnostics
 import TermColor.Layout
 import TermColor.ColorScheme
 
@@ -149,11 +150,10 @@ def renderTo (target : RenderTarget) (c : Command α) (width : Nat := 80)
     (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false) : String :=
   Text.render target (render c width scheme includeGlobals)
 
-/-- Render errors as a styled block, one per line. -/
+/-- Render errors with source labels for positioned value failures. -/
 def renderErrors (errs : List Err)
     (scheme : ColorScheme := ColorScheme.catppuccin) : Text :=
-  Text.concat <| errs.map fun e =>
-    nl (Text.styled "error" (Style.bold <+> Style.fg scheme.red)
-        ++ Text.styled (": " ++ e.message) (descriptionStyle scheme))
+  let report := errorsToDiagnostics errs
+  TermColor.Diagnostics.renderMany report.sources report.diagnostics {} scheme
 
 end Argus.Help

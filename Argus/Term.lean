@@ -38,8 +38,9 @@ def printHelp (c : Command α) (choice : ColorChoice := .auto)
 works and piping stdout stays clean. -/
 def printErrors (errs : List Err) (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
-  let target ← TermColor.target choice
-  (← IO.getStderr).putStr (Text.render target (Help.renderErrors errs scheme))
+  let stderr ← IO.getStderr
+  let target ← TermColor.targetWithTty choice (← stderr.isTty)
+  stderr.putStr (Text.render target (Help.renderErrors errs scheme))
 
 /-- Exit codes: `0` success, `1` runtime failure, `2` usage error. -/
 def usageExit : UInt32 := 2

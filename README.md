@@ -32,8 +32,9 @@ Argus.Properties  machine-checked laws, separate target so consumers do not link
 ```
 
 `Argus.Completions` depends on the spec alone — no color, no IO. `Argus.Help` uses
-[`termcolor`](https://github.com/jonaprieto/lean-termcolor) and
-[`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout), while
+[`termcolor`](https://github.com/jonaprieto/lean-termcolor),
+[`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout), and
+[`termcolor-diagnostics`](https://github.com/jonaprieto/lean-termcolor-diagnostics), while
 `Argus.Term` adds terminal sizing and output through
 [`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal).
 
@@ -47,6 +48,7 @@ These packages form one focused stack:
 
 [`termcolor`](https://github.com/jonaprieto/lean-termcolor) →
 [`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout) →
+[`termcolor-diagnostics`](https://github.com/jonaprieto/lean-termcolor-diagnostics) →
 [`termcolor-widgets`](https://github.com/jonaprieto/lean-termcolor-widgets) →
 [`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal)
 
@@ -130,12 +132,18 @@ someone later hopes to interpret.
 [grip](https://github.com/jonaprieto/grip) parser over the value's bytes, so `--timeout`
 takes a duration rather than a string something later hopes to interpret.
 
-**Errors accumulate.** `ap` has no data dependency between its sides, so both run and
-every independent failure is reported in one pass. Real output from the example above:
+**Errors accumulate and point into bad values.** `ap` has no data dependency between its
+sides, so both run and every independent failure is reported in one pass. Real output from the
+example above:
 
 ```
 $ grepish --jobs=12x --timout=1h a.txt
-error: invalid value '12x' for '--jobs' at column 2; expected a natural number
+error: invalid value for '--jobs'
+  --> value for --jobs:1:3
+   |
+1 | 12x
+  |   ^ expected a natural number
+
 error: missing required flag '--timeout'
 error: unknown flag '--timout=1h'; did you mean '--timeout'?
 ```

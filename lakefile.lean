@@ -2,7 +2,7 @@ import Lake
 open Lake DSL
 
 package «argus» where
-  version := v!"0.1.0"
+  version := v!"0.2.0"
   leanOptions := #[⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩]
 
 -- Pinned by SHA: the grade algebra and parser semantics must not move underfoot.
@@ -11,11 +11,15 @@ require grip from git
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"
-  @ "1d78a0ce44f3f97fe55f5b02d13fa42af55e8229"
+  @ "f0c0cef"
 
 require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
-  @ "b4cebaf65c8cb3a58b97acaeadf1b8aae275c19b"
+  @ "ec0f5df"
+
+require «termcolor-diagnostics» from git
+  "https://github.com/jonaprieto/lean-termcolor-diagnostics.git"
+  @ "2fe83e7"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
@@ -29,7 +33,7 @@ than globbed so that adding a module cannot silently widen what a consumer links
 lean_lib «Argus» where
   globs := #[.one `Argus, .one `Argus.Param, .one `Argus.Spec, .one `Argus.Runner,
              .one `Argus.Command, .one `Argus.Help, .one `Argus.Completions,
-             .one `Argus.Macro]
+             .one `Argus.Macro, .one `Argus.Diagnostics]
 
 /-- The IO layer, opt-in. Adds termcolor-terminal. A consumer that only parses, or that
 renders to a fixed width, never imports this and never links it. -/
