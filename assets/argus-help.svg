@@ -1,23 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
   <title id="title">Argus generated command help</title>
   <desc id="desc">A terminal showing aligned generated help for a typed grep-like command.</desc>
-  <rect width="1200" height="560" rx="20" fill="#1e1e2e"/>
+  <rect width="1200" height="700" rx="20" fill="#1e1e2e"/>
   <rect width="1200" height="58" rx="20" fill="#292b3b"/><rect y="38" width="1200" height="20" fill="#292b3b"/>
   <circle cx="32" cy="29" r="8" fill="#f38ba8"/><circle cx="58" cy="29" r="8" fill="#f9e2af"/><circle cx="84" cy="29" r="8" fill="#a6e3a1"/>
   <text x="116" y="36" fill="#cba6f7" font-family="SFMono-Regular,Menlo,monospace" font-size="20" font-weight="700">argus · generated help</text>
-  <rect x="40" y="92" width="1120" height="420" rx="16" fill="#181825" stroke="#45475a" stroke-width="2"/>
+  <rect x="40" y="92" width="1120" height="560" rx="16" fill="#181825" stroke="#45475a" stroke-width="2"/>
   <text x="72" y="140" fill="#cba6f7" font-family="SFMono-Regular,Menlo,monospace" font-size="29" font-weight="700">grepish 0.1.0</text>
   <text x="72" y="174" fill="#a6adc8" font-family="SFMono-Regular,Menlo,monospace" font-size="17">Search text with an inspectable command line.</text>
   <text x="72" y="226" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">USAGE</text>
   <text x="92" y="260" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">grepish [FLAGS] &lt;PATTERN&gt; &lt;FILE&gt;...</text>
-  <text x="72" y="312" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">FLAGS</text>
-  <text x="92" y="346" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-i, --ignore-case       Match without regard to case</text>
-  <text x="92" y="380" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-n, --line-number       Prefix matches with line numbers</text>
-  <text x="92" y="414" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-j, --jobs NAT           Number of worker threads</text>
-  <text x="92" y="448" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">    --timeout DURATION   Give up after</text>
-  <text x="720" y="226" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">ARGS</text>
-  <text x="740" y="260" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">&lt;PATTERN&gt; STRING</text>
-  <text x="740" y="294" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">&lt;FILE&gt;... PATH</text>
-  <text x="740" y="362" fill="#6c7086" font-family="SFMono-Regular,Menlo,monospace" font-size="16">one Spec value</text>
-  <text x="740" y="394" fill="#6c7086" font-family="SFMono-Regular,Menlo,monospace" font-size="16">drives parsing and help</text>
+  <text x="72" y="312" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">GLOBAL OPTIONS</text>
+  <text x="92" y="346" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-h, --help              Show this help page</text>
+  <text x="92" y="380" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">    --version           Show the command version</text>
+  <text x="92" y="414" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">    --completions SHELL  Print a shell completion script</text>
+  <text x="72" y="466" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">FLAGS</text>
+  <text x="92" y="500" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-i, --ignore-case       Match without regard to case</text>
+  <text x="92" y="534" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-n, --line-number       Prefix matches with line numbers</text>
+  <text x="92" y="568" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">-j, --jobs NAT           Number of worker threads</text>
+  <text x="92" y="602" fill="#94e2d5" font-family="SFMono-Regular,Menlo,monospace" font-size="18">    --timeout DURATION   Give up after</text>
+  <text x="720" y="466" fill="#f9e2af" font-family="SFMono-Regular,Menlo,monospace" font-size="18" font-weight="700">ARGS</text>
+  <text x="740" y="500" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">&lt;PATTERN&gt; STRING</text>
+  <text x="740" y="534" fill="#cdd6f4" font-family="SFMono-Regular,Menlo,monospace" font-size="18">&lt;FILE&gt;... PATH</text>
+  <text x="740" y="602" fill="#6c7086" font-family="SFMono-Regular,Menlo,monospace" font-size="16">one Spec value drives parsing and help</text>
 </svg>

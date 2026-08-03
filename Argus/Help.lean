@@ -13,7 +13,8 @@ import TermColor.ColorScheme
 # Argus.Help: colored help, derived from the spec
 
 Command-specific help is computed from `Spec.toMeta`, never written alongside it, so the two
-cannot drift. The optional terminal flags document the controls provided by `Argus.Term`.
+cannot drift. The optional `GLOBAL OPTIONS` block documents the controls provided by
+`Argus.Term`.
 That is what makes `help_sound` provable.
 
 Semantic styles use `ColorScheme.catppuccin` by default; callers can supply another
@@ -127,19 +128,20 @@ def render (c : Command α) (width : Nat := 80)
     (if c.description.isEmpty then Text.plain ""
      else nl (Text.styled c.description (mutedStyle scheme))) ++
     Text.plain "\n"
-  let extraFlags := if includeGlobals then globalFlags scheme else []
+  let globals := if includeGlobals then
+      block scheme "GLOBAL OPTIONS" (rows width (globalFlags scheme))
+    else Text.empty
   let body := match c.body with
     | .opts _ =>
       let m := c.toMeta
-      block scheme "FLAGS"
-          (rows width (extraFlags ++ m.flags.map fun f =>
+      globals ++ block scheme "FLAGS"
+          (rows width (m.flags.map fun f =>
             (flagLabel scheme f, Text.styled f.help (descriptionStyle scheme))))
         ++ block scheme "ARGS"
           (rows width (m.args.map fun a =>
             (argLabel scheme a, Text.styled a.help (descriptionStyle scheme))))
     | .subs children =>
-      block scheme "FLAGS" (rows width extraFlags) ++
-        block scheme "SUBCOMMANDS"
+      globals ++ block scheme "SUBCOMMANDS"
         (rows width (children.map fun child =>
           (subcommandLabel scheme child.name,
             Text.styled child.description (descriptionStyle scheme))))

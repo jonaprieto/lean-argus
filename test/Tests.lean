@@ -355,6 +355,7 @@ private def subcommandApp : Command SubcommandResult :=
 
 private def subcommandChecks : List (Option String) :=
   let help := (Help.render subcommandApp 80).plainText
+  let globalHelp := (Help.render subcommandApp 80 (includeGlobals := true)).plainText
   let leafHelp := (Help.render buildCommand 80).plainText
   let bash := Completions.bash subcommandApp
   let zsh := Completions.zsh subcommandApp
@@ -384,6 +385,9 @@ private def subcommandChecks : List (Option String) :=
   , check "branch help lists subcommands"
       (hasSubstr help "SUBCOMMANDS" && hasSubstr help "build"
         && hasSubstr help "Administrative commands")
+  , check "branch help keeps terminal globals separate"
+      (hasSubstr globalHelp "\nGLOBAL OPTIONS\n-h, --help"
+        && hasSubstr globalHelp "\nSUBCOMMANDS\n")
   , check "leaf help still lists flags"
       (hasSubstr leafHelp "FLAGS" && hasSubstr leafHelp "--force"
         && !hasSubstr leafHelp "SUBCOMMANDS")
@@ -497,9 +501,11 @@ private def helpChecks : List (Option String) :=
   , check "help uses the supplied color scheme"
       (hasSubstr themed "38;2;174;129;255"
         && hasSubstr typedThemed "38;2;253;151;31")
-  , check "help can show terminal global flags"
-      (hasSubstr globals "\nFLAGS\n-h, --help"
-        && hasSubstr globals "--completions SHELL")
+  , check "help separates terminal globals from command flags"
+      (hasSubstr globals "\nGLOBAL OPTIONS\n-h, --help"
+        && hasSubstr globals "--completions SHELL"
+        && hasSubstr globals "\nFLAGS\n-v, --verbose"
+        && !hasSubstr globals "\nFLAGS\n-h, --help")
   ]
 
 def main : IO UInt32 := do

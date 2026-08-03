@@ -181,10 +181,15 @@ grepish 0.1.0
 USAGE
   grepish [FLAGS] <FILE>...
 
+GLOBAL OPTIONS
+-h, --help           Show this help page
+--version            Show the command version
+--completions SHELL  Print a shell completion script
+
 FLAGS
--i, --ignore-case   Ignore case
--j, --jobs NAT      Worker threads
---timeout DURATION  Give up after
+-i, --ignore-case    Ignore case
+-j, --jobs NAT       Worker threads
+--timeout DURATION   Give up after
 
 ARGS
 <FILE>... PATH  Files to search
