@@ -56,16 +56,10 @@ Argus sits above it: [`grip`](https://github.com/jonaprieto/grip) supplies value
 `Argus.Help` uses layout, and `Argus.Term` connects parsed commands to terminal output.
 Each package keeps its machine-checked properties in a separate build target.
 
-## Visual gallery
+## Demo
 
-The demo gallery shows the same command specification producing help, accumulated diagnostics,
-and shell completions:
-
-![Argus generated help](assets/argus-help.svg)
-
-![Argus structured errors](assets/argus-errors.svg)
-
-![Argus shell completions](assets/argus-completions.svg)
+The demo shows the same command specification producing help, accumulated diagnostics, and shell
+completions.
 
 ## Quick start
 
