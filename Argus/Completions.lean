@@ -47,7 +47,7 @@ private def invalidNames (c : Command α) : List String :=
 termination_by sizeOf c
 decreasing_by
   have h := List.sizeOf_lt_of_mem ‹child ∈ children›
-  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  simp at *
   omega
 
 /-- Names that would be unsafe to interpolate into a script. Empty means the command is
@@ -103,7 +103,7 @@ private def nodes (path : List String) (c : Command α) :
 termination_by sizeOf c
 decreasing_by
   have h := List.sizeOf_lt_of_mem ‹child ∈ children›
-  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  simp at *
   omega
 
 private def pathKey (path : List String) : String :=
@@ -235,7 +235,7 @@ private def descendantNames (c : Command α) : List String :=
 termination_by sizeOf c
 decreasing_by
   have h := List.sizeOf_lt_of_mem ‹child ∈ children›
-  simp [Argus.Command._sizeOf_inst, Argus.Command._sizeOf_1] at *
+  simp at *
   omega
 
 private def fishCondition (path : List String) (c : Command α) : Option String :=
