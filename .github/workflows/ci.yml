@@ -66,7 +66,12 @@ jobs:
           fi
           echo "authenticated as: $(python3 -c 'import json;print(json.load(open("/tmp/who"))["login"])')"
           missing=0
-          for repo in grip lean-termcolor lean-termcolor-layout lean-termcolor-terminal; do
+          # Every repository the lakefile requires, directly or through one of the
+          # termcolor packages. `grip` here answered 301 once it was renamed to
+          # `lean-grip`, which reads as "no access" and failed the job.
+          for repo in lean-grip lean-termcolor lean-termcolor-layout \
+                      lean-termcolor-widgets lean-termcolor-diagnostics \
+                      lean-termcolor-terminal; do
             code=$(curl -s -o /dev/null -w '%{http_code}' \
               -H "Authorization: Bearer $TERMCOLOR_READ_TOKEN" \
               -H "Accept: application/vnd.github+json" \
