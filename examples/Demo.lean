@@ -37,7 +37,8 @@ private def queryCommand : Command String :=
         (Spec.map2 (fun (text : Bool) (targets : List String) => (text, targets))
           (Spec.switch "text" none "Output plain-text results")
           (Spec.many (Spec.arg "targets" "Targets to query" Param.str)))))
-    (description := "build targets and output results")
+    (description :=
+      "build targets and output results while preserving independent diagnostics for every target")
 
 private def inspectCommand : Command String :=
   Argus.cmd "inspect"

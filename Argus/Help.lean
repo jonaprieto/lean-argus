@@ -23,9 +23,10 @@ Semantic styles use `ColorScheme.catppuccin` by default; callers can supply anot
 Alignment uses `TermColor.Text.width` (display cells) rather than `String.length`, so a
 description containing CJK or emoji still lines up.
 
-`width` is a parameter, not detected. This keeps `Argus.Help` pure and free of
-`termcolor-terminal`; the caller supplies the real terminal width if it wants one. That
-is the same division `termcolor-widgets` documents: the caller owns terminal size.
+`width` is a parameter, not detected, and is also the wrap width for command descriptions. It
+defaults to 80. This keeps `Argus.Help` pure and free of `termcolor-terminal`; the caller supplies
+the real terminal width if it wants one. That is the same division `termcolor-widgets` documents:
+the caller owns terminal size.
 -/
 
 namespace Argus.Help
@@ -158,15 +159,18 @@ private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
         (argStyle scheme)
     command ++ flags ++ args
 
-/-- Render a command's help page. `includeGlobals` adds the standard `Argus.Term` controls. -/
+/-- Render a command's help page. Descriptions wrap to `width` (default 80), and `includeGlobals`
+adds the standard `Argus.Term` controls. -/
 def render (c : Command α) (width : Nat := 80)
     (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false)
     (commandPath : List String := []) : Text :=
   let name := commandName c commandPath
+  let description := if c.description.isEmpty then Text.empty else
+    Layout.joinLines <| Layout.splitLines <| Layout.wrapLines width
+      (Text.styled c.description (mutedStyle scheme))
   let header :=
     nl (titleText scheme c commandPath) ++
-    (if c.description.isEmpty then Text.plain ""
-     else nl (Text.styled c.description (mutedStyle scheme))) ++
+    (if c.description.isEmpty then Text.plain "" else nl description) ++
     Text.plain "\n"
   let globals := if includeGlobals then
       block scheme "BASIC OPTIONS" (rows width (globalFlags scheme))

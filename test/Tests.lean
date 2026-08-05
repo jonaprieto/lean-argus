@@ -26,6 +26,9 @@ private def check (name : String) (ok : Bool) : Option String :=
 private def hasSubstr (hay needle : String) : Bool :=
   (hay.splitOn needle).length > 1
 
+private def maxLineLength (text : String) : Nat :=
+  text.splitOn "\n" |>.foldl (fun longest line => max longest line.length) 0
+
 private def hasStyledSegment (text : TermColor.Text) (value : String)
     (style : TermColor.Style) : Bool :=
   text.segments.any fun segment => segment.text == value && segment.style == style
@@ -371,6 +374,9 @@ private def subcommandChecks : List (Option String) :=
   let help := (Help.render subcommandApp 80).plainText
   let globalHelp := (Help.render subcommandApp 80 (includeGlobals := true)).plainText
   let optionHelp := (Help.render globalOptionApp 80 (includeGlobals := true)).plainText
+  let longDescriptionCommand := Argus.cmd "long" (Spec.const ())
+    (description := "A deliberately long command description that should wrap cleanly")
+  let longDescriptionHelp := (Help.render longDescriptionCommand 24).plainText
   let leafHelp := (Help.render buildCommand 80).plainText
   let bash := Completions.bash subcommandApp
   let zsh := Completions.zsh subcommandApp
@@ -416,6 +422,8 @@ private def subcommandChecks : List (Option String) :=
   , check "group completions offer group options"
       (hasSubstr optionBash "--verbose" && hasSubstr optionZsh "--verbose"
         && hasSubstr optionFish "verbose")
+  , check "header descriptions wrap to the render width"
+      (maxLineLength longDescriptionHelp ≤ 24)
   , check "leaf help still lists options"
       (hasSubstr leafHelp "OPTIONS:" && hasSubstr leafHelp "--force"
         && !hasSubstr leafHelp "COMMANDS:")

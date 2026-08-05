@@ -2,7 +2,7 @@ import Lake
 open Lake DSL
 
 package «argus» where
-  version := v!"0.4.0"
+  version := v!"0.4.1"
   leanOptions := #[⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩]
 
 -- Pinned by SHA: the grade algebra and parser semantics must not move underfoot.
