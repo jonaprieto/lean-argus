@@ -113,7 +113,12 @@ def tool := Argus.group "tool"
 ```
 
 Nesting works to any depth. `tool buld` suggests `build`; `tool build --help` documents
-`build`, not `tool`.
+`build`, not `tool`, and keeps the full `tool build` path in the title and usage line. Both
+`Argus.cmd` and `Argus.group` also accept optional toolchain context, which appears in help and
+`--version` output when configured.
+
+Use `Argus.groupWithOptions` for options shared by every subcommand. They are parsed before the
+subcommand and rendered in their own `OPTIONS` block, separate from the terminal's `BASIC OPTIONS`.
 
 ## Value grammars
 
@@ -123,7 +128,8 @@ someone later hopes to interpret.
 | `Param` | accepts | yields |
 |---|---|---|
 | `str`, `path` | anything | `String` |
-| `nat`, `int` | `42`, `-42`, `+42` | `Nat`, `Int` |
+| `nat` | `42` | `Nat` |
+| `int` | `42`, `-42`, `+42` | `Int` |
 | `bool` | `true`/`yes`/`on`/`1` and negations, any case | `Bool` |
 | `duration` | `2h30m`, `1d`, `90s`, `90` | seconds |
 | `bytes` | `512`, `1k`, `1.5M`, `2GiB`, `10MB` | bytes |
@@ -173,7 +179,7 @@ $ grepish --help
 grepish version 0.1.0
 
 USAGE:
-  grepish [OPTIONS] <PATTERN> <FILE>...
+  grepish [OPTIONS] <FILE>...
 
 BASIC OPTIONS:
   -h, --help           Show this help page
@@ -181,13 +187,12 @@ BASIC OPTIONS:
   --completions SHELL  Print a shell completion script
 
 OPTIONS:
-  -i, --ignore-case  Ignore case
-  -j, --jobs NAT     Number of worker threads
-  --timeout DURATION Give up after
+  -i, --ignore-case   Ignore case
+  -j, --jobs NAT      Worker threads
+  --timeout DURATION  Give up after
 
 ARGS:
-  <PATTERN> STRING  Pattern to search for
-  <FILE>... PATH    Files to search
+  <FILE>... PATH  Files to search
 ```
 
 ## Completions
@@ -236,6 +241,7 @@ lake build                    # the pure library
 lake build Argus.Term         # opt-in IO layer (+ termcolor-terminal)
 lake build Argus.Properties   # the proofs
 lake exe tests                # the assertion suite, no framework
+lake build readme              # compile the README code examples
 lake exe demo                 # Lake-shaped help, command parsing, errors, completions
 python3 scripts/style-check.py
 ```

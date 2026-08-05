@@ -117,7 +117,7 @@ jobs:
           set -e
           printf '%s\n' "$output"
           test "$status" -eq 2
-          grep -q '^tool 1.0$' <<< "$output"
+          grep -q '^tool version 1.0$' <<< "$output"
       # ubuntu-latest ships bash only. Without these the shell checks below silently
       # degrade to "command not found", which is exit 127 rather than a real verdict.
       - name: Install the shells the completions target

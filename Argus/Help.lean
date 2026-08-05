@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Jonathan Cubides. All rights reserved.
+Copyright (c) 2026 Jonathan Prieto-Cubides. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jonathan Cubides
+Authors: Jonathan Prieto-Cubides
 -/
 
 import Argus.Command
@@ -181,7 +181,10 @@ def render (c : Command α) (width : Nat := 80)
           (rows width (m.args.map fun a =>
             (argLabel scheme a, Text.styled a.help (descriptionStyle scheme))))
     | .subs children =>
-      globals ++ block scheme "COMMANDS"
+      globals ++ block scheme "OPTIONS"
+          (rows width (c.toMeta.flags.map fun f =>
+            (flagLabel scheme f, Text.styled f.help (descriptionStyle scheme))))
+        ++ block scheme "COMMANDS"
         (rows width (children.map fun child =>
           (subcommandLabel scheme child,
             Text.styled child.description (descriptionStyle scheme))))

@@ -1,5 +1,5 @@
 /-
-Copyright (c) 2026 Jonathan Cubides. All rights reserved.
+Copyright (c) 2026 Jonathan Prieto-Cubides. All rights reserved.
 -/
 
 import Argus.Runner

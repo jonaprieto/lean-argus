@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Jonathan Cubides. All rights reserved.
+Copyright (c) 2026 Jonathan Prieto-Cubides. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jonathan Cubides
+Authors: Jonathan Prieto-Cubides
 -/
 
 import Argus
@@ -361,13 +361,23 @@ private def echoCommand : Command SubcommandResult :=
 private def subcommandApp : Command SubcommandResult :=
   Argus.group "tool" [buildCommand, adminCommand, echoCommand]
 
+private def globalOptionApp : Command SubcommandResult :=
+  Argus.groupWithOptions "tool"
+    (Spec.map (fun (_ : Bool) => ())
+      (Spec.switch "verbose" (some 'v') "Show detailed output"))
+    [buildCommand, adminCommand, echoCommand]
+
 private def subcommandChecks : List (Option String) :=
   let help := (Help.render subcommandApp 80).plainText
   let globalHelp := (Help.render subcommandApp 80 (includeGlobals := true)).plainText
+  let optionHelp := (Help.render globalOptionApp 80 (includeGlobals := true)).plainText
   let leafHelp := (Help.render buildCommand 80).plainText
   let bash := Completions.bash subcommandApp
   let zsh := Completions.zsh subcommandApp
   let fish := Completions.fish subcommandApp
+  let optionBash := Completions.bash globalOptionApp
+  let optionZsh := Completions.zsh globalOptionApp
+  let optionFish := Completions.fish globalOptionApp
   let leafBash := Completions.bash buildCommand
   let leafZsh := Completions.zsh buildCommand
   let leafFish := Completions.fish buildCommand
@@ -397,6 +407,15 @@ private def subcommandChecks : List (Option String) :=
   , check "branch help keeps terminal globals separate"
       (hasSubstr globalHelp "\nBASIC OPTIONS:\n  -h, --help"
         && hasSubstr globalHelp "\nCOMMANDS:\n")
+  , check "group options render separately from terminal globals"
+      (hasSubstr optionHelp "\nBASIC OPTIONS:\n  -h, --help"
+        && hasSubstr optionHelp "\nOPTIONS:\n  -v, --verbose  Show detailed output"
+        && hasSubstr optionHelp "\nCOMMANDS:\n")
+  , check "group options parse before the child"
+      (globalOptionApp.run ["--verbose", "build", "--force"] matches .ok (.build true))
+  , check "group completions offer group options"
+      (hasSubstr optionBash "--verbose" && hasSubstr optionZsh "--verbose"
+        && hasSubstr optionFish "verbose")
   , check "leaf help still lists options"
       (hasSubstr leafHelp "OPTIONS:" && hasSubstr leafHelp "--force"
         && !hasSubstr leafHelp "COMMANDS:")

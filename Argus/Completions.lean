@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Jonathan Cubides. All rights reserved.
+Copyright (c) 2026 Jonathan Prieto-Cubides. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Jonathan Cubides
+Authors: Jonathan Prieto-Cubides
 -/
 
 import Argus.Command
@@ -18,7 +18,7 @@ parser does not accept. That is `completion_sound`.
 ## Context
 
 Each generated script follows safe, non-flag words on the command line to the matching
-node. Branches offer child names; leaves offer their own flags and path arguments.
+node. Branches offer child names and shared flags; leaves offer their own flags and path arguments.
 
 ## Injection
 
@@ -39,11 +39,12 @@ def isSafeName (s : String) : Bool :=
 
 private def invalidNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, _, .opts spec⟩ =>
+  | ⟨_, _, _, _, _, .opts spec⟩ =>
     (spec.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
-  | ⟨_, _, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, _, .subs children⟩ =>
+    let flagNames := (c.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
     let childNames := children.map (·.name) |>.filter (fun n => !isSafeName n)
-    childNames ++ children.flatMap fun child => invalidNames child
+    flagNames ++ childNames ++ children.flatMap fun child => invalidNames child
 termination_by sizeOf c
 decreasing_by
   have h := List.sizeOf_lt_of_mem ‹child ∈ children›
@@ -93,10 +94,10 @@ private def fishQuote (value : String) : String :=
 private def nodes (path : List String) (c : Command α) :
     List (List String × Command α) :=
   match c with
-  | ⟨name, version, description, toolchain, .opts spec⟩ =>
-    [(path, { name, version, description, toolchain, body := .opts spec })]
-  | ⟨name, version, description, toolchain, .subs children⟩ =>
-    let c := { name, version, description, toolchain, body := .subs children }
+  | ⟨name, version, description, toolchain, globalOptions, .opts spec⟩ =>
+    [(path, { name, version, description, toolchain, globalOptions, body := .opts spec })]
+  | ⟨name, version, description, toolchain, globalOptions, .subs children⟩ =>
+    let c := { name, version, description, toolchain, globalOptions, body := .subs children }
     let here := [(path, c)]
     here ++ children.flatMap fun child =>
       if isSafeName child.name then nodes (path ++ [child.name]) child else []
@@ -114,7 +115,7 @@ private def pathKey (path : List String) : String :=
 private def bashWords (c : Command α) : String :=
   match c.body with
   | .opts _ => " ".intercalate (flagWords c)
-  | .subs _ => " ".intercalate (subcommandNames c)
+  | .subs _ => " ".intercalate (flagWords c ++ subcommandNames c)
 
 private def bashFiles (c : Command α) : String :=
   if wantsFiles c then
@@ -182,14 +183,22 @@ private def zshLeafArm (path : List String) (c : Command α) : String :=
   "        \"" ++ pathKey path ++ "\")\n" ++ body ++ "          ;;\n"
 
 private def zshBranchArm (path : List String) (c : Command α) : String :=
+  let flags := zshFlagSpecs c
   let choices := match c.body with
     | .opts _ => []
     | .subs children =>
       children.filter (fun child => isSafeName child.name) |>.map fun child =>
         shellQuote (child.name ++ ":" ++ zshEscape child.description)
+  let body := if flags.isEmpty then
+      "          _describe 'subcommand' choices\n"
+    else
+      "          _arguments \\\n" ++
+        " \\\n".intercalate (flags ++ ["'*:subcommand:->subcommand'"]) ++ "\n" ++
+        "          if [[ \"$state\" == subcommand ]]; then\n" ++
+        "            _describe 'subcommand' choices\n" ++
+        "          fi\n"
   "        \"" ++ pathKey path ++ "\")\n" ++
-  "          choices=(" ++ " ".intercalate choices ++ ")\n" ++
-  "          _describe 'subcommand' choices\n" ++
+  "          choices=(" ++ " ".intercalate choices ++ ")\n" ++ body ++
   "          ;;\n"
 
 private def zshArm (node : List String × Command α) : String :=
@@ -228,8 +237,8 @@ def zsh (c : Command α) : String :=
 
 private def descendantNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, _, .opts _⟩ => []
-  | ⟨_, _, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, _, .opts _⟩ => []
+  | ⟨_, _, _, _, _, .subs children⟩ =>
     children.flatMap fun child =>
       if isSafeName child.name then [child.name] ++ descendantNames child else []
 termination_by sizeOf c
@@ -273,9 +282,12 @@ private def fishNodeLines (target : String) (node : List String × Command α) :
     let noFiles := if wantsFiles c then [] else ["complete -c " ++ target ++ " -f" ++ when]
     flags ++ noFiles
   | .subs _ =>
+    let flags := c.toMeta.flags.filter (fun f => isSafeName f.long) |>.map
+      (fishFlagLine target when)
     let names := " ".intercalate (subcommandNames c)
-    if names.isEmpty then []
-    else ["complete -c " ++ target ++ " -f" ++ when ++ " -a " ++ fishQuote names]
+    let children := if names.isEmpty then []
+      else ["complete -c " ++ target ++ " -f" ++ when ++ " -a " ++ fishQuote names]
+    flags ++ children
 
 /-- fish completions use command-line conditions for every safe node in the tree. -/
 def fish (c : Command α) : String :=
