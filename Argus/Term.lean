@@ -30,9 +30,10 @@ variable {α : Type}
 /-- Print help to stdout, at the real terminal width, in whatever color the environment
 allows. -/
 def printHelp (c : Command α) (choice : ColorChoice := .auto)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    (commandPath : List String := []) : IO Unit := do
   let width ← Terminal.terminalWidth
-  TermColor.print (Help.render c width scheme (includeGlobals := true)) choice
+  TermColor.print (Help.render c width scheme (includeGlobals := true) commandPath) choice
 
 /-- Print errors to stderr. Diagnostics belong on stderr so `tool 2>/dev/null` still
 works and piping stdout stays clean. -/
@@ -65,12 +66,18 @@ def main (c : Command α) (argv : List String) (body : α → IO UInt32)
   -- `tool build --help` documents `build`, not `tool`. Matching only `["--help"]` at the
   -- root would send it down to the child, which would reject it as an unknown flag.
   if argv.contains "--help" || argv.contains "-h" then
-    printHelp (c.resolve argv) .auto scheme
+    let (path, target) := c.resolvePath argv
+    printHelp target .auto scheme path
     return 0
   if argv.contains "--version" then
     let target := c.resolve argv
+    let toolchain := target.toolchain <|> c.toolchain
     match target.version <|> c.version with
-    | some v => IO.println s!"{target.name} {v}"; return 0
+    | some v =>
+      let suffix := match toolchain with
+        | some t => s!" ({t})"
+        | none => ""
+      IO.println s!"{target.name} version {v}{suffix}"; return 0
     | none => IO.println target.name; return 0
   match argv with
   | ["--completions", shell] =>
@@ -87,7 +94,8 @@ def main (c : Command α) (argv : List String) (body : α → IO UInt32)
     | .error errs =>
       printErrors errs .auto scheme
       IO.eprintln ""
-      printHelp c .auto scheme
+      let (path, target) := c.resolvePath argv
+      printHelp target .auto scheme path
       return usageExit
 
 end Argus.Term

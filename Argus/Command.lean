@@ -10,7 +10,7 @@ import Argus.Runner
 # Argus.Command: a named, versioned entry point
 
 A `Spec` describes options. A `Command` adds the identity a help page and a completion
-script need: name, version, description.
+script need: name, version, description, and optional toolchain context.
 -/
 
 namespace Argus
@@ -21,6 +21,7 @@ mutual
     name : String
     version : Option String := none
     description : String := ""
+    toolchain : Option String := none
     body : Body α
 
   inductive Body (α : Type) where
@@ -31,13 +32,15 @@ end
 /-- Build a command. Prefer this over the structure literal: the grade is inferred from
 the spec, so callers never write one. -/
 def cmd {g : Grade} {α : Type} (name : String) (spec : Spec g α)
-    (version : Option String := none) (description : String := "") : Command α :=
-  { name, version, description, body := .opts spec }
+    (version : Option String := none) (description : String := "")
+    (toolchain : Option String := none) : Command α :=
+  { name, version, description, toolchain, body := .opts spec }
 
 /-- Build a command group. -/
 def group {α : Type} (name : String) (children : List (Command α))
-    (version : Option String := none) (description : String := "") : Command α :=
-  { name, version, description, body := .subs children }
+    (version : Option String := none) (description : String := "")
+    (toolchain : Option String := none) : Command α :=
+  { name, version, description, toolchain, body := .subs children }
 
 namespace Command
 
@@ -85,22 +88,26 @@ def run (c : Command α) (argv : List String) : Except (List Err) α :=
 Flags are stepped over, so `tool --verbose build --help` still resolves to `build`. An
 unrecognised name stops the walk and yields the last good command, which is what a user
 asking for help after a typo should see. -/
-def resolve (c : Command α) (argv : List String) : Command α :=
-  let rec go : Nat → Command α → List String → Command α
-    | 0, c, _ => c
-    | _, c, [] => c
-    | fuel + 1, c, a :: rest =>
+def resolvePath (c : Command α) (argv : List String) : List String × Command α :=
+  let rec go : Nat → Command α → List String → List String → List String × Command α
+    | 0, c, _, path => (path, c)
+    | _, c, [], path => (path, c)
+    | fuel + 1, c, a :: rest, path =>
       if a.startsWith "-" then
         let remaining := if globalFlagTakesValue a then rest.drop 1 else rest
-        go fuel c remaining
+        go fuel c remaining path
       else
         match c.body with
-        | .opts _ => c
+        | .opts _ => (path, c)
         | .subs children =>
           match children.find? (·.name == a) with
-          | some child => go fuel child rest
-          | none => c
-  go (argv.length + 1) c argv
+          | some child => go fuel child rest (path ++ [child.name])
+          | none => (path, c)
+  go (argv.length + 1) c argv [c.name]
+
+/-- Follow subcommand names as far as they match, returning the deepest command reached. -/
+def resolve (c : Command α) (argv : List String) : Command α :=
+  (c.resolvePath argv).2
 
 /-- The command's erased metadata. -/
 def toMeta (c : Command α) : Meta :=
@@ -111,13 +118,13 @@ def toMeta (c : Command α) : Meta :=
 /-- Flag names a shell should offer, long form. -/
 def flagNames (c : Command α) : List String := c.toMeta.flags.map (·.long)
 
-/-- A `USAGE` line derived from the metadata. -/
+/-- A command synopsis derived from the metadata. -/
 def usageLine (c : Command α) : String :=
   match c.body with
-  | .subs _ => c.name ++ " <SUBCOMMAND>"
+  | .subs _ => c.name ++ " [OPTIONS] <COMMAND>"
   | .opts _ =>
     let m := c.toMeta
-    let flags := if m.flags.isEmpty then "" else " [FLAGS]"
+    let flags := if m.flags.isEmpty then "" else " [OPTIONS]"
     let args := m.args.foldl (fun acc a =>
       acc ++ " <" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) ""
     c.name ++ flags ++ args

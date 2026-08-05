@@ -26,6 +26,10 @@ private def check (name : String) (ok : Bool) : Option String :=
 private def hasSubstr (hay needle : String) : Bool :=
   (hay.splitOn needle).length > 1
 
+private def hasStyledSegment (text : TermColor.Text) (value : String)
+    (style : TermColor.Style) : Bool :=
+  text.segments.any fun segment => segment.text == value && segment.style == style
+
 private def macroOptsChecks : List (Option String) :=
   let parse (argv : List String) : Option (Bool × Nat × List String) :=
     match Argus.run MacroOpts.spec argv with
@@ -211,6 +215,8 @@ private def resolveChecks : List (Option String) :=
       ((root.resolve ["build", "extra"]).name == "build")
   , check "the resolved child carries its own flags, not the parent's"
       ((root.resolve ["build"]).flagNames == ["release"])
+  , check "resolution keeps the full command path"
+      ((root.resolvePath ["inner", "leaf"]).1 == ["tool", "inner", "leaf"])
   ]
 
 /-! ### Edit distance (backs "did you mean") -/
@@ -385,14 +391,15 @@ private def subcommandChecks : List (Option String) :=
   , check "child receives argv after its name"
       (subcommandApp.run ["echo", "payload"] matches .ok (.echo "payload"))
   , check "branch help lists subcommands"
-      (hasSubstr help "SUBCOMMANDS" && hasSubstr help "build"
+      (hasSubstr help "COMMANDS:" && hasSubstr help "build [OPTIONS]"
+        && hasSubstr help "echo <VALUE>"
         && hasSubstr help "Administrative commands")
   , check "branch help keeps terminal globals separate"
-      (hasSubstr globalHelp "\nGLOBAL OPTIONS\n-h, --help"
-        && hasSubstr globalHelp "\nSUBCOMMANDS\n")
-  , check "leaf help still lists flags"
-      (hasSubstr leafHelp "FLAGS" && hasSubstr leafHelp "--force"
-        && !hasSubstr leafHelp "SUBCOMMANDS")
+      (hasSubstr globalHelp "\nBASIC OPTIONS:\n  -h, --help"
+        && hasSubstr globalHelp "\nCOMMANDS:\n")
+  , check "leaf help still lists options"
+      (hasSubstr leafHelp "OPTIONS:" && hasSubstr leafHelp "--force"
+        && !hasSubstr leafHelp "COMMANDS:")
   , check "branch bash completions offer child names"
       (hasSubstr bash "build" && hasSubstr bash "admin" && hasSubstr bash "echo")
   , check "branch zsh completions offer child names"
@@ -490,16 +497,26 @@ private def longCmd :=
 /-- Rendered at 40 columns, the description must wrap, continuation lines must be
 indented under the description column, and no line may carry trailing whitespace. -/
 private def helpChecks : List (Option String) :=
+  let scheme := TermColor.ColorScheme.monokai
+  let themedFlagStyle := TermColor.Style.combine TermColor.Style.bold
+    (TermColor.Style.fg scheme.green)
+  let themedArgStyle := TermColor.Style.combine TermColor.Style.bold
+    (TermColor.Style.fg scheme.yellow)
+  let themedTypeStyle := TermColor.Style.fg scheme.orange
+  let themedTitleStyle := TermColor.Style.combine
+    (TermColor.Style.combine TermColor.Style.bold TermColor.Style.underline)
+    (TermColor.Style.fg scheme.pink)
   let lines := (Help.render longCmd 40).plainText.splitOn "\n"
   let flagLines := lines.filter (fun l => (l.splitOn "--verbose").length > 1)
   let contLines := lines.filter (fun l => (l.splitOn "detail").length > 1)
-  let themed := TermColor.Text.render TermColor.RenderTarget.trueColor
-    (Help.render longCmd 40 TermColor.ColorScheme.monokai)
+  let themed := Help.render longCmd 40 scheme
   let typed := Argus.cmd "typed"
     (Spec.flag "jobs" none "Worker count" Param.nat)
-  let typedThemed := TermColor.Text.render TermColor.RenderTarget.trueColor
-    (Help.render typed 40 TermColor.ColorScheme.monokai)
+  let typedThemed := Help.render typed 40 scheme
   let globals := (Help.render longCmd 40 (includeGlobals := true)).plainText
+  let commandThemed := Help.render subcommandApp 80 scheme
+  let titleThemed := Help.render longCmd 40 scheme
+  let nested := (Help.render echoCommand 80 (commandPath := ["tool", "echo"])).plainText
   [ check "no line has trailing whitespace"
       (lines.all fun l => !l.endsWith " ")
   , check "the long description wraps onto more than one line"
@@ -509,13 +526,24 @@ private def helpChecks : List (Option String) :=
   , check "no rendered line exceeds the requested width"
       (lines.all fun l => l.length <= 40)
   , check "help uses the supplied color scheme"
-      (hasSubstr themed "38;2;174;129;255"
-        && hasSubstr typedThemed "38;2;253;151;31")
+      (hasStyledSegment themed "--verbose" themedFlagStyle
+        && hasStyledSegment typedThemed " NAT" themedTypeStyle)
+  , check "help titles are highlighted separately from commands"
+      (hasStyledSegment titleThemed "demo" themedTitleStyle)
+  , check "command synopses keep option and argument colors"
+      (hasStyledSegment commandThemed " [OPTIONS]" themedFlagStyle
+        && hasStyledSegment commandThemed " <VALUE>" themedArgStyle)
+  , check "nested help keeps the full command path"
+      (hasSubstr nested "tool echo\n"
+        && hasSubstr nested "\nUSAGE:\n  tool echo <VALUE>")
   , check "help separates terminal globals from command flags"
-      (hasSubstr globals "\nGLOBAL OPTIONS\n-h, --help"
+      (hasSubstr globals "\nBASIC OPTIONS:\n  -h, --help"
         && hasSubstr globals "--completions SHELL"
-        && hasSubstr globals "\nFLAGS\n-v, --verbose"
-        && !hasSubstr globals "\nFLAGS\n-h, --help")
+        && hasSubstr globals "\nOPTIONS:\n  -v, --verbose"
+        && !hasSubstr globals "\nOPTIONS:\n  -h, --help")
+  , check "help uses Lake-style headings and placeholders"
+      (hasSubstr globals "\nUSAGE:\n  demo [OPTIONS]"
+        && !hasSubstr globals "[FLAGS]")
   ]
 
 def main : IO UInt32 := do

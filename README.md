@@ -58,8 +58,8 @@ Each package keeps its machine-checked properties in a separate build target.
 
 ## Demo
 
-The demo shows the same command specification producing help, accumulated diagnostics, and shell
-completions.
+The demo builds a structured command tree, then uses that same command specification for help,
+typed parsing, accumulated diagnostics, and bash/zsh/fish completions.
 
 ## Quick start
 
@@ -170,23 +170,24 @@ display-cell width, not `String.length`, so CJK and emoji still line up.
 
 ```
 $ grepish --help
-grepish 0.1.0
+grepish version 0.1.0
 
-USAGE
-  grepish [FLAGS] <FILE>...
+USAGE:
+  grepish [OPTIONS] <PATTERN> <FILE>...
 
-GLOBAL OPTIONS
--h, --help           Show this help page
---version            Show the command version
---completions SHELL  Print a shell completion script
+BASIC OPTIONS:
+  -h, --help           Show this help page
+  --version            Show the command version
+  --completions SHELL  Print a shell completion script
 
-FLAGS
--i, --ignore-case    Ignore case
--j, --jobs NAT       Worker threads
---timeout DURATION   Give up after
+OPTIONS:
+  -i, --ignore-case  Ignore case
+  -j, --jobs NAT     Number of worker threads
+  --timeout DURATION Give up after
 
-ARGS
-<FILE>... PATH  Files to search
+ARGS:
+  <PATTERN> STRING  Pattern to search for
+  <FILE>... PATH    Files to search
 ```
 
 ## Completions
@@ -235,7 +236,7 @@ lake build                    # the pure library
 lake build Argus.Term         # opt-in IO layer (+ termcolor-terminal)
 lake build Argus.Properties   # the proofs
 lake exe tests                # the assertion suite, no framework
-lake exe demo                 # one Command value -> help, parses, completion scripts
+lake exe demo                 # Lake-shaped help, command parsing, errors, completions
 python3 scripts/style-check.py
 ```
 

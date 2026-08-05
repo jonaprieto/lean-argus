@@ -39,9 +39,9 @@ def isSafeName (s : String) : Bool :=
 
 private def invalidNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, .opts spec⟩ =>
+  | ⟨_, _, _, _, .opts spec⟩ =>
     (spec.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
-  | ⟨_, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, .subs children⟩ =>
     let childNames := children.map (·.name) |>.filter (fun n => !isSafeName n)
     childNames ++ children.flatMap fun child => invalidNames child
 termination_by sizeOf c
@@ -93,10 +93,10 @@ private def fishQuote (value : String) : String :=
 private def nodes (path : List String) (c : Command α) :
     List (List String × Command α) :=
   match c with
-  | ⟨name, version, description, .opts spec⟩ =>
-    [(path, { name, version, description, body := .opts spec })]
-  | ⟨name, version, description, .subs children⟩ =>
-    let c := { name, version, description, body := .subs children }
+  | ⟨name, version, description, toolchain, .opts spec⟩ =>
+    [(path, { name, version, description, toolchain, body := .opts spec })]
+  | ⟨name, version, description, toolchain, .subs children⟩ =>
+    let c := { name, version, description, toolchain, body := .subs children }
     let here := [(path, c)]
     here ++ children.flatMap fun child =>
       if isSafeName child.name then nodes (path ++ [child.name]) child else []
@@ -228,8 +228,8 @@ def zsh (c : Command α) : String :=
 
 private def descendantNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, .opts _⟩ => []
-  | ⟨_, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, .opts _⟩ => []
+  | ⟨_, _, _, _, .subs children⟩ =>
     children.flatMap fun child =>
       if isSafeName child.name then [child.name] ++ descendantNames child else []
 termination_by sizeOf c
