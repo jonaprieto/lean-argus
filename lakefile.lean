@@ -2,12 +2,12 @@ import Lake
 open Lake DSL
 
 package «argus» where
-  version := v!"0.4.3"
+  version := v!"0.4.4"
   leanOptions := #[⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩]
 
--- Pinned by SHA: the grade algebra and parser semantics must not move underfoot.
+-- Pinned release tag: the grade algebra and parser semantics must not move underfoot.
 require grip from git
-  "https://github.com/jonaprieto/lean-grip" @ "17bed154d8188650bf8dd458ec44385ce72d6ba4"
+  "https://github.com/jonaprieto/lean-grip" @ "v0.1.0"
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"
