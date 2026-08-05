@@ -41,6 +41,7 @@ def printErrors (errs : List Err) (choice : ColorChoice := .auto)
   let stderr ← IO.getStderr
   let target ← TermColor.targetWithTty choice (← stderr.isTty)
   stderr.putStr (Text.render target (Help.renderErrors errs scheme))
+  stderr.putStr "\n"
 
 /-- Exit codes: `0` success, `1` runtime failure, `2` usage error. -/
 def usageExit : UInt32 := 2

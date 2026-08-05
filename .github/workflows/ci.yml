@@ -108,6 +108,16 @@ jobs:
           build-args: "Argus Argus.Term Argus.Properties tests demo readme completion-fixture"
       - name: Run the test suite
         run: ./.lake/build/bin/tests
+      - name: Usage errors separate diagnostics from help
+        shell: bash
+        run: |
+          set +e
+          output=$(NO_COLOR=1 ./.lake/build/bin/completion-fixture 2>&1)
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -eq 2
+          grep -q '^tool 1.0$' <<< "$output"
       # ubuntu-latest ships bash only. Without these the shell checks below silently
       # degrade to "command not found", which is exit 127 rather than a real verdict.
       - name: Install the shells the completions target
