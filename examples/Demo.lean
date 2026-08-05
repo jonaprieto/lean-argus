@@ -71,12 +71,14 @@ private def runAction (action : String) : IO UInt32 := do
   pure 0
 
 private def demo : IO UInt32 := do
+  let terminalWidth ← Terminal.terminalWidth
+  let width := min terminalWidth TermColor.Layout.defaultWidth
   rule "TOOL HELP"
-  IO.print (Help.renderTo RenderTarget.trueColor tool 100 demoScheme (includeGlobals := true))
+  IO.print (Help.renderTo RenderTarget.trueColor tool width demoScheme (includeGlobals := true))
 
   rule "COMMAND-SPECIFIC HELP"
   IO.print
-    (Help.renderTo RenderTarget.trueColor queryCommand 80 demoScheme (includeGlobals := true)
+    (Help.renderTo RenderTarget.trueColor queryCommand width demoScheme (includeGlobals := true)
       (commandPath := ["tool", "query"]))
 
   rule "A SUCCESSFUL PARSE"
