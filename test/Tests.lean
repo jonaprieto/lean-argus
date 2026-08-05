@@ -132,6 +132,9 @@ private def optNatThenTextSpec :=
 private def optFlagSpec :=
   Spec.opt (Spec.flag "mode" none "Mode" Param.str)
 
+private def optDurationFlagSpec :=
+  Spec.opt (Spec.flag "timeout" none "Timeout" Param.duration)
+
 private def altLeftSpec :=
   Spec.alt (Spec.const "left") (Spec.const "right")
 
@@ -162,6 +165,10 @@ private def specChecks : List (Option String) :=
       (Argus.run optFlagSpec [] matches .ok none)
   , check "opt over a flag yields some when present"
       (Argus.run optFlagSpec ["--mode=fast"] matches .ok (some "fast"))
+  , check "opt preserves invalid valued flags"
+      (match Argus.run optDurationFlagSpec ["--timeout=wat"] with
+       | .error [error] => error.message.startsWith "invalid value"
+       | _ => false)
   , check "alt takes the left branch on success"
       (Argus.run altLeftSpec [] matches .ok "left")
   , check "alt falls back to the right branch, restoring what the left consumed"

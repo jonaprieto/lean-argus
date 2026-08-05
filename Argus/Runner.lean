@@ -205,7 +205,11 @@ def interp : {g : Grade} → {α : Type} → Spec g α → St → Option α × S
   | _, _, .opt x, st =>
     match interp x st with
     | (some a, st') => (some (some a), st')
-    | (none, _) => (some none, st)
+    | (none, st') =>
+        if st'.flags.length < st.flags.length then
+          (some none, st')
+        else
+          (some none, st)
   | _, _, .many x, st =>
     -- The element's type already guarantees it consumes. The interpreter still bounds the
     -- loop by the token count and demands measurable progress, so even a mis-built
