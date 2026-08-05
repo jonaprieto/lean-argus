@@ -86,6 +86,7 @@ def main (c : Command α) (argv : List String) (body : α → IO UInt32)
     | .ok value => body value
     | .error errs =>
       printErrors errs .auto scheme
+      IO.eprintln ""
       printHelp c .auto scheme
       return usageExit
 
