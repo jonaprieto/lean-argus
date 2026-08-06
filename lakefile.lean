@@ -2,7 +2,7 @@ import Lake
 open Lake DSL
 
 package «argus» where
-  version := v!"0.4.6"
+  version := v!"0.4.7"
   leanOptions := #[⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩]
 
 -- Pinned release tag: the grade algebra and parser semantics must not move underfoot.
@@ -15,17 +15,17 @@ require «termcolor» from git
 
 require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
-  @ "v0.1.7"
+  @ "v0.1.8"
 
 require «termcolor-diagnostics» from git
   "https://github.com/jonaprieto/lean-termcolor-diagnostics.git"
-  @ "v0.1.9"
+  @ "v0.1.10"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
 require «termcolor-terminal» from git
   "https://github.com/jonaprieto/lean-termcolor-terminal.git"
-  @ "v0.1.9"
+  @ "v0.1.11"
 
 /-- The pure library. Deps: grip, termcolor, termcolor-layout. Listed explicitly rather
 than globbed so that adding a module cannot silently widen what a consumer links. -/
