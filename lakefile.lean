@@ -2,7 +2,7 @@ import Lake
 open Lake DSL
 
 package «argus» where
-  version := v!"0.4.7"
+  version := v!"0.4.8"
   leanOptions := #[⟨`autoImplicit, false⟩, ⟨`relaxedAutoImplicit, false⟩]
 
 -- Pinned release tag: the grade algebra and parser semantics must not move underfoot.
@@ -19,7 +19,7 @@ require «termcolor-layout» from git
 
 require «termcolor-diagnostics» from git
   "https://github.com/jonaprieto/lean-termcolor-diagnostics.git"
-  @ "v0.1.10"
+  @ "v0.1.11"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
