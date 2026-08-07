@@ -7,8 +7,6 @@
 Typed command-line parsing for Lean 4. Flag values are Grip grammars; help text and shell
 completions are derived from the same command specification.
 
-Version: `v0.4.8`
-
 ## Quick start
 
 ```lean
