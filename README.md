@@ -243,7 +243,7 @@ lake build Argus.Properties   # the proofs
 lake exe tests                # the assertion suite, no framework
 lake build readme              # compile the README code examples
 lake exe demo                 # Lake-shaped help, command parsing, errors, completions
-python3 scripts/style-check.py
+pre-commit run --all-files
 ```
 
 ## License
