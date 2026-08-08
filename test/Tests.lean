@@ -274,6 +274,16 @@ private def firstErr (argv : List String) : String :=
   | .ok _ => "<no error>"
   | .error es => (es.head?.map Err.message).getD "<empty>"
 
+-- Keep the user-facing diagnostic wording stable; the executable checks below also cover the
+-- broader behavior, while these assertions make accidental message drift visible at compile time.
+/-- info: "invalid value '12x' for '--jobs' at column 2; expected a natural number" -/
+#guard_msgs in
+#eval firstErr ["--jobs=12x", "needle"]
+
+/-- info: "unknown flag '--jbs=2'; did you mean '--jobs'?" -/
+#guard_msgs in
+#eval firstErr ["--jbs=2", "needle", "--jobs=1"]
+
 /-! ### Spec metadata -/
 
 private def metaChecks : List (Option String) :=
