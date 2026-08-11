@@ -83,6 +83,13 @@ private def block (scheme : ColorScheme) (title : String) (body : Text) : Text :
   if body.plainText.isEmpty then Text.plain ""
   else nl (Text.styled (title ++ ":") (sectionStyle scheme)) ++ body ++ Text.plain "\n"
 
+private def examples (scheme : ColorScheme) (command : Command α) : Text :=
+  if command.examples.isEmpty then Text.empty
+  else
+    let rows := command.examples.map fun sample =>
+      Text.styled ("  " ++ sample) (descriptionStyle scheme)
+    block scheme "EXAMPLES" (Layout.joinLines rows ++ Text.plain "\n")
+
 /-- `-i, --ignore-case` or `-j, --jobs NAT`. -/
 private def flagLabel (scheme : ColorScheme) (f : FlagInfo) : Text :=
   let long := Text.styled ("--" ++ f.long) (flagStyle scheme)
@@ -94,7 +101,7 @@ private def flagLabel (scheme : ColorScheme) (f : FlagInfo) : Text :=
   | some t => both ++ Text.styled (" " ++ t) (typeStyle scheme)
 
 private def argLabel (scheme : ColorScheme) (a : ArgInfo) : Text :=
-  Text.styled ("<" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) (argStyle scheme)
+  Text.styled (ArgInfo.usage a) (argStyle scheme)
     ++ Text.styled (" " ++ a.typeName) (typeStyle scheme)
 
 private def subcommandLabel (scheme : ColorScheme) (c : Command α) : Text :=
@@ -108,8 +115,7 @@ private def subcommandLabel (scheme : ColorScheme) (c : Command α) : Text :=
     let flags := if m.flags.isEmpty then Text.empty
       else Text.styled " [OPTIONS]" (flagStyle scheme)
     let args := Text.concat <| m.args.map fun a =>
-      Text.styled (" <" ++ a.name ++ ">" ++ (if a.variadic then "..." else ""))
-        (argStyle scheme)
+      Text.styled (" " ++ ArgInfo.usage a) (argStyle scheme)
     command ++ flags ++ args
 
 private def commandName (c : Command α) (path : List String) : String :=
@@ -155,8 +161,7 @@ private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
     let flags := if m.flags.isEmpty then Text.empty
       else Text.styled " [OPTIONS]" (flagStyle scheme)
     let args := Text.concat <| m.args.map fun a =>
-      Text.styled (" <" ++ a.name ++ ">" ++ (if a.variadic then "..." else ""))
-        (argStyle scheme)
+      Text.styled (" " ++ ArgInfo.usage a) (argStyle scheme)
     command ++ flags ++ args
 
 /-- Render a command's help page. Descriptions wrap to `width` (default 80), and `includeGlobals`
@@ -193,7 +198,7 @@ def render (c : Command α) (width : Nat := 80)
           (subcommandLabel scheme child,
             Text.styled child.description (descriptionStyle scheme))))
   let usage := usageText scheme { c with name := name }
-  header ++ block scheme "USAGE" (nl (Text.plain "  " ++ usage)) ++ body
+  header ++ block scheme "USAGE" (nl (Text.plain "  " ++ usage)) ++ body ++ examples scheme c
 
 /-- Render to a string for a known target. -/
 def renderTo (target : RenderTarget) (c : Command α) (width : Nat := 80)

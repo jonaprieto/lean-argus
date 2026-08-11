@@ -28,12 +28,20 @@ open Grip
 
 variable {α β : Type} {g : Grade}
 
+/-- Completion behavior exposed by a typed parameter. -/
+inductive CompletionKind where
+  | none
+  | path
+deriving Repr, BEq, Inhabited
+
 /-- A typed parameter: a display name for help, and a decoder for the value. -/
 structure Param (α : Type) where
   /-- Shown in help and usage lines: `NAT`, `FILE`, `DURATION`. -/
   typeName : String
   /-- Parser over the value's bytes. `Grip.Parser α` is `GParser fallible α`. -/
   parser : Grip.Parser α
+  /-- How interactive frontends should complete this value. -/
+  completion : CompletionKind := .none
 
 namespace Param
 
@@ -53,7 +61,7 @@ def named (typeName : String) (p : Param α) : Param α :=
 
 /-- Post-process a decoded value. -/
 def map (f : α → β) (p : Param α) : Param β :=
-  { typeName := p.typeName, parser := GParser.map f p.parser }
+  { typeName := p.typeName, parser := GParser.map f p.parser, completion := p.completion }
 
 /-! ### Primitives -/
 
@@ -75,7 +83,7 @@ def nat : Param Nat where
 /-- A filesystem path. Decodes like `str`; the distinct `typeName` is what lets
 completions emit `compgen -f` for this parameter. -/
 def path : Param String :=
-  named "PATH" str
+  { str with typeName := "PATH", completion := .path }
 
 /-! ### More typed values -/
 

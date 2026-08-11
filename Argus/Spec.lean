@@ -40,7 +40,8 @@ structure FlagInfo where
   short : Option Char
   help : String
   typeName : Option String
-  deriving Repr, BEq, Inhabited
+  completion : CompletionKind := .none
+deriving Repr, BEq, Inhabited
 
 /-- One positional argument, with its type erased. -/
 structure ArgInfo where
@@ -48,7 +49,20 @@ structure ArgInfo where
   help : String
   typeName : String
   variadic : Bool
-  deriving Repr, BEq, Inhabited
+  /-- Whether the argument is accepted zero or one times. -/
+  optional : Bool := false
+  /-- How interactive frontends should complete this value. -/
+  completion : CompletionKind := .none
+deriving Repr, BEq, Inhabited
+
+namespace ArgInfo
+
+/-- Render the argument in a command synopsis. -/
+def usage (argument : ArgInfo) : String :=
+  let body := "<" ++ argument.name ++ ">" ++ if argument.variadic then "..." else ""
+  if argument.optional then "[" ++ body ++ "]" else body
+
+end ArgInfo
 
 /-- Everything help and completions need. Derived from a `Spec`, never written by hand. -/
 structure Meta where
@@ -93,15 +107,26 @@ namespace Spec
 
 variable {α β : Type} {g g₁ g₂ : Grade}
 
+private def flagInfo (long : String) (short : Option Char) (help : String)
+    (typeName : Option String) (completion : CompletionKind) : FlagInfo :=
+  { long, short, help, typeName, completion }
+
+private def argInfo (name help : String) (p : Param α) : ArgInfo :=
+  { name, help, typeName := p.typeName, variadic := false, completion := p.completion }
+
 /-- Project the erased metadata. Help and completions read only this. -/
 def toMeta : {g : Grade} → {α : Type} → Spec g α → Meta
   | _, _, .const _ => Meta.empty
-  | _, _, .switch l s h => { flags := [⟨l, s, h, none⟩], args := [] }
-  | _, _, .flag l s h p => { flags := [⟨l, s, h, some p.typeName⟩], args := [] }
-  | _, _, .arg n h p => { flags := [], args := [⟨n, h, p.typeName, false⟩] }
+  | _, _, .switch l s h => { flags := [flagInfo l s h none .none], args := [] }
+  | _, _, .flag l s h p =>
+    { flags := [flagInfo l s h (some p.typeName) p.completion], args := [] }
+  | _, _, .arg n h p =>
+    { flags := [], args := [argInfo n h p] }
   | _, _, .ap f x => toMeta f ++ toMeta x
   | _, _, .alt x y => toMeta x ++ toMeta y
-  | _, _, .opt x => toMeta x
+  | _, _, .opt x =>
+    let m := toMeta x
+    { flags := m.flags, args := m.args.map ({ · with optional := true }) }
   | _, _, .many x =>
     let m := toMeta x
     { flags := m.flags, args := m.args.map ({ · with variadic := true }) }

@@ -26,6 +26,8 @@ mutual
     toolchain : Option String := none
     globalOptions : Option GlobalSpec := none
     body : Body α
+    /-- Runnable examples shown by frontend help renderers. -/
+    examples : List String := []
 
   inductive Body (α : Type) where
     | opts {g : Grade} (spec : Spec g α) : Body α
@@ -36,22 +38,23 @@ end
 the spec, so callers never write one. -/
 def cmd {g : Grade} {α : Type} (name : String) (spec : Spec g α)
     (version : Option String := none) (description : String := "")
-    (toolchain : Option String := none) : Command α :=
-  { name, version, description, toolchain, globalOptions := none, body := .opts spec }
+    (toolchain : Option String := none) (examples : List String := []) : Command α :=
+  { name, version, description, toolchain, globalOptions := none, body := .opts spec, examples }
 
 /-- Build a command group. -/
 def group {α : Type} (name : String) (children : List (Command α))
     (version : Option String := none) (description : String := "")
-    (toolchain : Option String := none) : Command α :=
-  { name, version, description, toolchain, globalOptions := none, body := .subs children }
+    (toolchain : Option String := none) (examples : List String := []) : Command α :=
+  { name, version, description, toolchain, globalOptions := none, body := .subs children, examples }
 
 /-- Build a command group with options shared by every subcommand. The option value is parsed
 and discarded; child commands still produce the group's result. -/
 def groupWithOptions {g : Grade} {α : Type} (name : String) (options : Spec g Unit)
     (children : List (Command α)) (version : Option String := none)
-    (description : String := "") (toolchain : Option String := none) : Command α :=
+    (description : String := "") (toolchain : Option String := none)
+    (examples : List String := []) : Command α :=
   { name, version, description, toolchain,
-    globalOptions := some ⟨g, options⟩, body := .subs children }
+    globalOptions := some ⟨g, options⟩, body := .subs children, examples }
 
 namespace Command
 
@@ -157,8 +160,7 @@ def usageLine (c : Command α) : String :=
   | .opts _ =>
     let m := c.toMeta
     let flags := if m.flags.isEmpty then "" else " [OPTIONS]"
-    let args := m.args.foldl (fun acc a =>
-      acc ++ " <" ++ a.name ++ ">" ++ (if a.variadic then "..." else "")) ""
+    let args := m.args.foldl (fun acc a => acc ++ " " ++ ArgInfo.usage a) ""
     c.name ++ flags ++ args
 
 end Command
