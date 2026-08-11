@@ -414,6 +414,8 @@ private def subcommandChecks : List (Option String) :=
   let leafBash := Completions.bash buildCommand
   let leafZsh := Completions.zsh buildCommand
   let leafFish := Completions.fish buildCommand
+  let optionContext := Command.completionContext subcommandApp ["build"] "--f"
+  let argumentContext := Command.completionContext subcommandApp ["echo"] "value"
   [ check "two-level group dispatches and parses child flags"
       (subcommandApp.run ["build", "--force"] matches .ok (.build true))
   , check "nested group dispatches correctly"
@@ -464,6 +466,10 @@ private def subcommandChecks : List (Option String) :=
       (hasSubstr fish "build" && hasSubstr fish "admin" && hasSubstr fish "echo")
   , check "leaf completions still offer flags"
       (hasSubstr leafBash "--force" && hasSubstr leafZsh "--force" && hasSubstr leafFish "force")
+  , check "completion context identifies options structurally"
+      (match optionContext.target with | .option => true | _ => false)
+  , check "completion context identifies positional arguments structurally"
+      (match argumentContext.target with | .argument info => info.name == "VALUE" | _ => false)
   ]
 
 private def completionLeafCommand : Command SubcommandResult :=

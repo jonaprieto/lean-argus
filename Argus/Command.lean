@@ -34,6 +34,21 @@ mutual
     | subs (children : List (Command α)) : Body α
 end
 
+/-- The part of a command that an interactive frontend should complete. -/
+inductive CompletionTarget where
+  | subcommand
+  | option
+  | flagValue (info : FlagInfo)
+  | argument (info : ArgInfo)
+  | none
+deriving Repr, BEq, Inhabited
+
+/-- Structural command context at an interactive cursor. -/
+structure CompletionContext (α : Type) where
+  path : List String
+  command : Command α
+  target : CompletionTarget
+
 /-- Build a command. Prefer this over the structure literal: the grade is inferred from
 the spec, so callers never write one. -/
 def cmd {g : Grade} {α : Type} (name : String) (spec : Spec g α)
@@ -59,6 +74,39 @@ def groupWithOptions {g : Grade} {α : Type} (name : String) (options : Spec g U
 namespace Command
 
 variable {α : Type}
+
+private def flagSpelling (flag : FlagInfo) (token : String) : Bool :=
+  let spelling := token.splitOn "=" |>.headD token
+  spelling == "--" ++ flag.long ||
+    match flag.short with
+    | some short => spelling == "-" ++ short.toString
+    | none => false
+
+private def flagInfo? (metadata : Meta) (token : String) : Option FlagInfo :=
+  metadata.flags.find? (flagSpelling · token)
+
+private def positionalTokens (metadata : Meta) : List String → List String
+  | [] => []
+  | "--" :: rest => rest
+  | token :: rest =>
+      match flagInfo? metadata token with
+      | some flag =>
+          if flag.typeName.isSome && !(token.contains '=') then
+            match rest with
+            | _ :: remaining => positionalTokens metadata remaining
+            | [] => []
+          else positionalTokens metadata rest
+      | none =>
+          if token.startsWith "-" then positionalTokens metadata rest
+          else token :: positionalTokens metadata rest
+
+private def argumentAt? (args : List ArgInfo) (index : Nat) : Option ArgInfo :=
+  match args[index]? with
+  | some argument => some argument
+  | none => args.reverse.find? (·.variadic)
+
+private def optionTarget (current : String) : CompletionTarget :=
+  if current.startsWith "-" then .option else .none
 
 private def globalFlagTakesValue (arg : String) : Bool :=
   arg == "--completions" || arg.startsWith "--completions="
@@ -149,6 +197,33 @@ def toMeta (c : Command α) : Meta :=
   | .subs _ => match c.globalOptions with
     | none => Meta.empty
     | some ⟨_, spec⟩ => spec.toMeta
+
+/-- Derive the command/argument context at a cursor from tokens before it and its fragment.
+
+The caller owns tokenization and cursor ranges; Argus owns command-path resolution, flag-value
+consumption, and positional argument identity. -/
+def completionContext (root : Command α) (before : List String) (current : String) :
+    CompletionContext α :=
+  let (path, command) := root.resolvePath before
+  match command.body with
+  | .subs _ => { path, command, target := .subcommand }
+  | .opts _ =>
+      let metadata := command.toMeta
+      let commandCount := path.length - 1
+      let commandArguments := before.drop commandCount
+      let target := match commandArguments.reverse with
+        | previous :: _ =>
+            match flagInfo? metadata previous with
+            | some flag => if flag.typeName.isSome then .flagValue flag else optionTarget current
+            | none =>
+                if current.startsWith "-" then .option
+                else
+                  (argumentAt? metadata.args (positionalTokens metadata commandArguments).length)
+                    |>.map .argument |>.getD .none
+        | [] =>
+            if current.startsWith "-" then .option
+            else argumentAt? metadata.args 0 |>.map .argument |>.getD .none
+      { path, command, target }
 
 /-- Flag names a shell should offer, long form. -/
 def flagNames (c : Command α) : List String := c.toMeta.flags.map (·.long)
