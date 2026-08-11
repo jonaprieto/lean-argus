@@ -39,9 +39,9 @@ def isSafeName (s : String) : Bool :=
 
 private def invalidNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, _, _, .opts spec⟩ =>
+  | ⟨_, _, _, _, _, .opts spec, _⟩ =>
     (spec.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
-  | ⟨_, _, _, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, _, .subs children, _⟩ =>
     let flagNames := (c.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
     let childNames := children.map (·.name) |>.filter (fun n => !isSafeName n)
     flagNames ++ childNames ++ children.flatMap fun child => invalidNames child
@@ -69,7 +69,8 @@ private def flagWords (c : Command α) : List String :=
 /-- Whether any positional argument is path-typed, so the script should also offer
 filenames. `Param.path` is what sets this apart from `Param.str`. -/
 private def wantsFiles (c : Command α) : Bool :=
-  c.toMeta.args.any (fun a => a.typeName == "PATH")
+  c.toMeta.args.any (fun a => a.completion == .path) ||
+    c.toMeta.flags.any (fun f => f.completion == .path)
 
 private def subcommandNames (c : Command α) : List String :=
   match c.body with
@@ -94,10 +95,8 @@ private def fishQuote (value : String) : String :=
 private def nodes (path : List String) (c : Command α) :
     List (List String × Command α) :=
   match c with
-  | ⟨name, version, description, toolchain, globalOptions, .opts spec⟩ =>
-    [(path, { name, version, description, toolchain, globalOptions, body := .opts spec })]
-  | ⟨name, version, description, toolchain, globalOptions, .subs children⟩ =>
-    let c := { name, version, description, toolchain, globalOptions, body := .subs children }
+  | ⟨_, _, _, _, _, .opts _, _⟩ => [(path, c)]
+  | ⟨_, _, _, _, _, .subs children, _⟩ =>
     let here := [(path, c)]
     here ++ children.flatMap fun child =>
       if isSafeName child.name then nodes (path ++ [child.name]) child else []
@@ -237,8 +236,8 @@ def zsh (c : Command α) : String :=
 
 private def descendantNames (c : Command α) : List String :=
   match c with
-  | ⟨_, _, _, _, _, .opts _⟩ => []
-  | ⟨_, _, _, _, _, .subs children⟩ =>
+  | ⟨_, _, _, _, _, .opts _, _⟩ => []
+  | ⟨_, _, _, _, _, .subs children, _⟩ =>
     children.flatMap fun child =>
       if isSafeName child.name then [child.name] ++ descendantNames child else []
 termination_by sizeOf c

@@ -67,7 +67,8 @@ private def paramChecks : List (Option String) :=
   , check "str keeps '=' in the value"
       (Param.str.decode "a=b" matches .ok "a=b")
   , check "path decodes like str but is named PATH"
-      (Param.path.typeName == "PATH" && Param.path.decode "/tmp/x" matches .ok "/tmp/x")
+      (Param.path.typeName == "PATH" && Param.path.completion == .path &&
+        Param.path.decode "/tmp/x" matches .ok "/tmp/x")
   , check "map post-processes"
       ((Param.nat.map (· * 2)).decode "21" matches .ok 42)
   ]
@@ -274,6 +275,16 @@ private def firstErr (argv : List String) : String :=
   | .ok _ => "<no error>"
   | .error es => (es.head?.map Err.message).getD "<empty>"
 
+-- Keep the user-facing diagnostic wording stable; the executable checks below also cover the
+-- broader behavior, while these assertions make accidental message drift visible at compile time.
+/-- info: "invalid value '12x' for '--jobs' at column 2; expected a natural number" -/
+#guard_msgs in
+#eval firstErr ["--jobs=12x", "needle"]
+
+/-- info: "unknown flag '--jbs=2'; did you mean '--jobs'?" -/
+#guard_msgs in
+#eval firstErr ["--jbs=2", "needle", "--jobs=1"]
+
 /-! ### Spec metadata -/
 
 private def metaChecks : List (Option String) :=
@@ -287,6 +298,12 @@ private def metaChecks : List (Option String) :=
       (optsSpec.toMeta.args.map (·.name) == ["PATTERN", "FILE"])
   , check "many marks its argument variadic"
       (optsSpec.toMeta.args.map (·.variadic) == [false, true])
+  , check "optional marks its argument optional"
+      ((Spec.opt (Spec.arg "FILE" "Input" Param.path)).toMeta.args.map (·.optional) == [true])
+  , check "usage brackets optional variadics"
+      (Command.usageLine
+        (Argus.cmd "scan" (Spec.opt (Spec.many (Spec.arg "FILE" "Input" Param.path)))) ==
+        "scan [<FILE>...]")
   ]
 
 /-! ### Runner -/
@@ -385,6 +402,9 @@ private def subcommandChecks : List (Option String) :=
     (description := "A deliberately long command description that should wrap cleanly")
   let longDescriptionHelp := (Help.render longDescriptionCommand 24).plainText
   let leafHelp := (Help.render buildCommand 80).plainText
+  let exampleCommand := Argus.cmd "example" (Spec.const ())
+    (description := "Example command") (examples := ["tool example"])
+  let exampleHelp := (Help.render exampleCommand 80).plainText
   let bash := Completions.bash subcommandApp
   let zsh := Completions.zsh subcommandApp
   let fish := Completions.fish subcommandApp
@@ -394,6 +414,8 @@ private def subcommandChecks : List (Option String) :=
   let leafBash := Completions.bash buildCommand
   let leafZsh := Completions.zsh buildCommand
   let leafFish := Completions.fish buildCommand
+  let optionContext := Command.completionContext subcommandApp ["build"] "--f"
+  let argumentContext := Command.completionContext subcommandApp ["echo"] "value"
   [ check "two-level group dispatches and parses child flags"
       (subcommandApp.run ["build", "--force"] matches .ok (.build true))
   , check "nested group dispatches correctly"
@@ -434,6 +456,8 @@ private def subcommandChecks : List (Option String) :=
   , check "leaf help still lists options"
       (hasSubstr leafHelp "OPTIONS:" && hasSubstr leafHelp "--force"
         && !hasSubstr leafHelp "COMMANDS:")
+  , check "help includes command examples"
+      (hasSubstr exampleHelp "EXAMPLES:" && hasSubstr exampleHelp "tool example")
   , check "branch bash completions offer child names"
       (hasSubstr bash "build" && hasSubstr bash "admin" && hasSubstr bash "echo")
   , check "branch zsh completions offer child names"
@@ -442,6 +466,10 @@ private def subcommandChecks : List (Option String) :=
       (hasSubstr fish "build" && hasSubstr fish "admin" && hasSubstr fish "echo")
   , check "leaf completions still offer flags"
       (hasSubstr leafBash "--force" && hasSubstr leafZsh "--force" && hasSubstr leafFish "force")
+  , check "completion context identifies options structurally"
+      (match optionContext.target with | .option => true | _ => false)
+  , check "completion context identifies positional arguments structurally"
+      (match argumentContext.target with | .argument info => info.name == "VALUE" | _ => false)
   ]
 
 private def completionLeafCommand : Command SubcommandResult :=

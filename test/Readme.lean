@@ -31,6 +31,9 @@ def tool := Argus.group "tool"
       (description := "Run the tests") ]
   (version := some "0.1.0")
 def main (argv : List String) : IO UInt32 :=
-  Argus.Term.main grepish argv fun o => do
-    IO.println s!"{o.jobs} workers, {o.timeout}s budget, {o.files.length} files"
-    return 0
+  if argv.isEmpty then
+    pure 0
+  else
+    Argus.Term.main grepish argv fun o => do
+      IO.println s!"{o.jobs} workers, {o.timeout}s budget, {o.files.length} files"
+      return 0
