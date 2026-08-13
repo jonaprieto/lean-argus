@@ -9,6 +9,8 @@
 Typed command-line parsing for Lean 4. Flag values are Grip grammars; help text and shell
 completions are derived from the same command specification.
 
+<p align="center"><img src="docs/assets/argus-1.png" alt="Argus help and diagnostics demo" width="480"></p>
+
 ## Quick start
 
 ```lean
