@@ -1,4 +1,4 @@
-# argus
+# lean-argus
 
 [![CI](https://github.com/jonaprieto/lean-argus/actions/workflows/ci.yml/badge.svg)](https://github.com/jonaprieto/lean-argus/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/jonaprieto/lean-argus?display_name=tag&sort=semver)](https://github.com/jonaprieto/lean-argus/releases)
@@ -6,10 +6,22 @@
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-4c8bf5)](https://jonaprieto.github.io/lean-argus/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
-Typed command-line parsing for Lean 4. Flag values are Grip grammars; help text and shell
+Typed command-line parsing for Lean 4. Flag values are [Grip grammars](https://github.com/jonaprieto/lean-grip); help text and shell
 completions are derived from the same command specification.
 
 <p align="center"><img src="docs/assets/argus-1.png" alt="Argus help and diagnostics demo" width="480"></p>
+
+## Status and review
+
+These libraries are actively evolving and are developed with AI assistance and human review.
+CI and machine-checked proofs provide useful evidence, but do not guarantee correctness,
+soundness, portability, performance, or suitability for every use case. Validate behavior
+and assumptions before relying on a release.
+
+Reviewer feedback is welcome, especially on correctness, proofs, API design, usability,
+portability, performance, documentation, and real-world use. Please use the
+[issue tracker](https://github.com/jonaprieto/lean-argus/issues) or open a PR with a
+reproducible example and the expected behavior.
 
 ## Quick start
 
