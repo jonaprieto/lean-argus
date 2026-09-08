@@ -11,17 +11,10 @@ completions are derived from the same command specification.
 
 <p align="center"><img src="docs/assets/argus-1.png" alt="Argus help and diagnostics demo" width="480"></p>
 
-## Status and review
+## Development
 
-These libraries are actively evolving and are developed with AI assistance and human review.
-CI and machine-checked proofs provide useful evidence, but do not guarantee correctness,
-soundness, portability, performance, or suitability for every use case. Validate behavior
-and assumptions before relying on a release.
-
-Reviewer feedback is welcome, especially on correctness, proofs, API design, usability,
-portability, performance, documentation, and real-world use. Please use the
-[issue tracker](https://github.com/jonaprieto/lean-argus/issues) or open a PR with a
-reproducible example and the expected behavior.
+This project is maintained by its author with AI-assisted development tools.
+Changes are reviewed, tested, and remain the maintainer's responsibility.
 
 ## Quick start
 
