@@ -9,6 +9,11 @@
 Typed command-line parsing for Lean 4. Flag values are [Grip grammars](https://github.com/jonaprieto/lean-grip); help text and shell
 completions are derived from the same command specification.
 
+## Problem
+
+Command-line interfaces often duplicate their parsing, help, and completion logic; a single typed
+specification should drive all three.
+
 <p align="center"><img src="docs/assets/argus-1.png" alt="Argus help and diagnostics demo" width="480"></p>
 
 ## Development
@@ -64,7 +69,6 @@ Built on [`grip`](https://github.com/jonaprieto/lean-grip),
 [`termcolor-layout`](https://github.com/jonaprieto/lean-termcolor-layout),
 [`termcolor-diagnostics`](https://github.com/jonaprieto/lean-termcolor-diagnostics), and
 [`termcolor-terminal`](https://github.com/jonaprieto/lean-termcolor-terminal). It is used by
-[`eventb-lean`](https://github.com/jonaprieto/eventb-lean),
 [`lean-calc-chat`](https://github.com/jonaprieto/lean-calc-chat),
 [`termcolor-repl`](https://github.com/jonaprieto/lean-termcolor-repl), and
 [`oatp`](https://github.com/jonaprieto/oatp).
