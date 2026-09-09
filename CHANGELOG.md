@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.4 — 2026-09-08
+
+- Support Lean v4.33.1 and refresh first-party dependencies.
+- Clarify AI-assisted development.
+
 ## 0.5.3 — 2026-08-13
 
 - Add the standard review guidance to the README.
