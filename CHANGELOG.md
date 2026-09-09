@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 — 2026-09-09
+
+- Refresh the terminal stack and document the contribution policy and package problem.
+
 ## 0.5.4 — 2026-09-08
 
 - Support Lean v4.33.1 and refresh first-party dependencies.
