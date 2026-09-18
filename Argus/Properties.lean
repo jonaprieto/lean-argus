@@ -109,8 +109,7 @@ def proofSpec :=
 
 def proofCommand : Command ProofOpts := cmd "proof" proofSpec
 
-theorem proof_meta
-    : proofCommand.flagNames = ["verbose", "jobs"] := by
+theorem proof_meta : proofCommand.flagNames = ["verbose", "jobs"] := by
   rfl
 
 end Argus.Properties

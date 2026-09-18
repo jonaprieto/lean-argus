@@ -228,8 +228,10 @@ adds the standard `Argus.Term` controls. -/
 def render
     (c : Command α)
     (width : Nat := 80)
-    (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false)
-    (commandPath : List String := []) : Text :=
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    (includeGlobals : Bool := false)
+    (commandPath : List String := [])
+    : Text :=
   let name := commandName c commandPath
   let description := if c.description.isEmpty then Text.empty else
     Layout.joinLines <| Layout.splitLines <| Layout.wrapLines width
@@ -266,8 +268,10 @@ def renderTo
     (target : RenderTarget)
     (c : Command α)
     (width : Nat := 80)
-    (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false)
-    (commandPath : List String := []) : String :=
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    (includeGlobals : Bool := false)
+    (commandPath : List String := [])
+    : String :=
   Text.render target (render c width scheme includeGlobals commandPath)
 
 /-- Render errors with source labels for positioned value failures. -/

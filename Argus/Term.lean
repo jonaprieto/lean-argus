@@ -33,7 +33,8 @@ def printHelp
     (c : Command α)
     (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin)
-    (commandPath : List String := []) : IO Unit := do
+    (commandPath : List String := [])
+    : IO Unit := do
   let width ← Terminal.terminalWidth
   TermColor.print (Help.render c width scheme (includeGlobals := true) commandPath) choice
 
@@ -42,7 +43,8 @@ works and piping stdout stays clean. -/
 def printErrors
     (errs : List Err)
     (choice : ColorChoice := .auto)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    : IO Unit := do
   let stderr ← IO.getStderr
   let target ← TermColor.targetWithTty choice (← stderr.isTty)
   stderr.putStr (Text.render target (Help.renderErrors errs scheme))
