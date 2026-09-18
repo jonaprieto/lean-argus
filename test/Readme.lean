@@ -32,7 +32,8 @@ def tool := Argus.group "tool"
   (version := some "0.1.0")
 def main
     (argv : List String)
-    : IO UInt32 :=
+    : IO UInt32
+    :=
   if argv.isEmpty then
     pure 0
   else

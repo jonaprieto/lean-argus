@@ -39,7 +39,8 @@ theorem reachableFlagNames_eq
     {g : Grade}
     {α : Type}
     (s : Spec g α)
-    : reachableFlagNames s = s.flagNames := by
+    : reachableFlagNames s = s.flagNames
+    := by
   induction s with
   | const => rfl
   | switch => rfl
@@ -68,31 +69,36 @@ theorem toMeta_complete
     (s : Spec g α)
     (long : String)
     : long ∈ reachableFlagNames s →
-      long ∈ s.toMeta.flags.map (·.long) := by
+      long ∈ s.toMeta.flags.map (·.long)
+    := by
   rw [reachableFlagNames_eq s]
   exact id
 
 theorem grade_mul_one_left
     (g : Grade)
-    : Grade.mul Grade.pure g = g := by
+    : Grade.mul Grade.pure g = g
+    := by
   cases g with
   | mk errors consumes => cases errors <;> cases consumes <;> rfl
 
 theorem grade_mul_one_right
     (g : Grade)
-    : Grade.mul g Grade.pure = g := by
+    : Grade.mul g Grade.pure = g
+    := by
   cases g with
   | mk errors consumes => cases errors <;> cases consumes <;> rfl
 
 theorem grade_choice_one_left
     (g : Grade)
-    : Grade.choice Grade.pure g = Grade.pure := by
+    : Grade.choice Grade.pure g = Grade.pure
+    := by
   cases g with
   | mk errors consumes => cases errors <;> cases consumes <;> rfl
 
 theorem grade_choice_idempotent
     (g : Grade)
-    : Grade.choice g g = g := by
+    : Grade.choice g g = g
+    := by
   cases g with
   | mk errors consumes => cases errors <;> cases consumes <;> rfl
 

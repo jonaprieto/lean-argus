@@ -52,7 +52,8 @@ namespace Param
 def decode
     (p : Param α)
     (s : String)
-    : Except Grip.ParseError α :=
+    : Except Grip.ParseError α
+    :=
   p.parser.parse s.toUTF8
 
 /-- Build a `Param` from any graded parser, requiring it to consume the whole value.
@@ -60,21 +61,24 @@ The `eof` is what makes `--jobs=4x` a failure rather than a silent `4`. -/
 def ofParser
     (typeName : String)
     (p : GParser g α)
-    : Param α :=
+    : Param α
+    :=
   { typeName, parser := (GParser.seqL p GParser.eof).weakenFallible }
 
 /-- Rename a parameter's displayed type without changing how it decodes. -/
 def named
     (typeName : String)
     (p : Param α)
-    : Param α :=
+    : Param α
+    :=
   { p with typeName }
 
 /-- Post-process a decoded value. -/
 def map
     (f : α → β)
     (p : Param α)
-    : Param β :=
+    : Param β
+    :=
   { typeName := p.typeName, parser := GParser.map f p.parser, completion := p.completion }
 
 /-! ### Primitives -/
@@ -107,20 +111,23 @@ def labelled
     {g : Grade}
     (typeName expected : String)
     (p : GParser g α)
-    : Param α :=
+    : Param α
+    :=
   { typeName, parser := GParser.label expected (ofParser typeName p).parser }
 
 private
 def byteSliceString
     (arr : ByteArray)
     (q q' : Nat)
-    : String :=
+    : String
+    :=
   (String.fromUTF8? (arr.extract q q')).getD ""
 
 private
 def digitsValue
     (s : String)
-    : Nat :=
+    : Nat
+    :=
   s.toList.foldl (fun n c => n * 10 + (c.toNat - 48)) 0
 
 private
@@ -134,7 +141,8 @@ private
 def decimalValue
     (s : String)
     (multiplier : Nat)
-    : Nat :=
+    : Nat
+    :=
   match s.splitOn "." with
   | [whole] => digitsValue whole * multiplier
   | [whole, fraction] =>
@@ -145,7 +153,8 @@ def decimalValue
 private
 def boolValue
     (s : String)
-    : Option Bool :=
+    : Option Bool
+    :=
   match s.toLower with
   | "true" | "yes" | "on" | "1" => some true
   | "false" | "no" | "off" | "0" => some false
@@ -154,7 +163,8 @@ def boolValue
 private
 def rangeValue
     (s : String)
-    : Option (Nat × Nat) :=
+    : Option (Nat × Nat)
+    :=
   match s.splitOn ".." with
   | [lo, hi] =>
     let lo := digitsValue lo
@@ -203,7 +213,8 @@ private
 def bytesScale
     (name : String)
     (scale : Nat)
-    : GParser conditional Nat :=
+    : GParser conditional Nat
+    :=
   GParser.map (fun _ => scale) (GParser.string name)
 
 private def bytesUnit : GParser conditional Nat :=
@@ -253,7 +264,8 @@ private
 def csvElement
     {α : Type}
     (p : Param α)
-    : GParser conditional α :=
+    : GParser conditional α
+    :=
   GParser.captureWith?
     (fun arr q q' =>
       match p.decode (byteSliceString arr q q') with
@@ -265,7 +277,8 @@ def csvElement
 def csv
     {α : Type}
     (p : Param α)
-    : Param (List α) :=
+    : Param (List α)
+    :=
   labelled "LIST" "a nonempty comma-separated list element"
     (GParser.sepBy (csvElement p) (GParser.ch ','))
 
@@ -282,7 +295,8 @@ private
 def enumCore
     {α : Type}
     (choices : List (String × α))
-    : GParser fallible α :=
+    : GParser fallible α
+    :=
   GParser.captureWith?
     (fun arr q q' => enumValue choices (byteSliceString arr q q'))
     (GParser.takeWhile (fun _ => true))
@@ -292,7 +306,8 @@ failure lists all accepted names in its expected-message label. -/
 def enum
     {α : Type}
     (choices : List (String × α))
-    : Param α :=
+    : Param α
+    :=
   labelled "ENUM" ("one of " ++ String.intercalate ", " (choices.map (·.1)))
     (enumCore choices)
 

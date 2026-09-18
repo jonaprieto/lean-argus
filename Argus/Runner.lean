@@ -76,7 +76,8 @@ structure Tokens where
 private
 def splitEq
     (s : String)
-    : String × Option String :=
+    : String × Option String
+    :=
   match s.splitOn "=" with
   | [] => (s, none)
   | [only] => (only, none)
@@ -94,7 +95,8 @@ them against the spec's short names. Everything after a bare `--` is positional.
 def tokenize
     (takesValue : String → Bool)
     (argv : List String)
-    : Tokens :=
+    : Tokens
+    :=
   go (argv.length + 1) argv { flags := [], positionals := [] }
 where
   go : Nat → List String → Tokens → Tokens
@@ -139,7 +141,8 @@ structure St where
 deletion, and substitution. -/
 def editDistance
     (a b : String)
-    : Nat :=
+    : Nat
+    :=
   let bs := b.toList
   let init : List Nat := List.range (bs.length + 1)
   let final := a.toList.foldl (fun prev ac =>
@@ -160,7 +163,8 @@ def editDistance
 def suggest
     (known : List String)
     (given : String)
-    : Option String :=
+    : Option String
+    :=
   let scored := known.map (fun k => (editDistance k given, k))
   match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
   | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
@@ -171,7 +175,8 @@ def takeFlag
     (st : St)
     (long : String)
     (short : Option Char)
-    : Option (Option String × String) × St :=
+    : Option (Option String × String) × St
+    :=
   let nameMatches (n : String) : Bool :=
     n == long || (match short with | some c => n == c.toString | none => false)
   match st.flags.findIdx? (fun (n, _, _) => nameMatches n) with
@@ -258,7 +263,8 @@ def run
     {α : Type}
     (s : Spec g α)
     (argv : List String)
-    : Except (List Err) α :=
+    : Except (List Err) α
+    :=
   -- A flag takes a value exactly when its metadata records a type name. Switches do not.
   let valued := s.toMeta.flags.filter (·.typeName.isSome)
   let takesValue (n : String) : Bool :=

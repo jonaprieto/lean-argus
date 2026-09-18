@@ -39,34 +39,40 @@ variable {α : Type}
 private
 def sectionStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.bold <+> Style.fg scheme.purple
 private
 def commandStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.bold <+> Style.fg scheme.cyan
 private
 def titleCommandStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.bold <+> Style.underline <+> Style.fg scheme.pink
 private
 def flagStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.bold <+> Style.fg scheme.green
 private
 def argStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.bold <+> Style.fg scheme.yellow
 private def typeStyle (scheme : ColorScheme) : Style := Style.fg scheme.orange
 private def descriptionStyle (scheme : ColorScheme) : Style := Style.fg scheme.foreground
 private
 def mutedStyle
     (scheme : ColorScheme)
-    : Style :=
+    : Style
+    :=
   Style.dim <+> Style.fg scheme.comment
 
 private def nl (t : Text) : Text := t ++ Text.plain "\n"
@@ -81,7 +87,8 @@ private
 def rows
     (width : Nat)
     (items : List (Text × Text))
-    : Text :=
+    : Text
+    :=
   if items.isEmpty then Text.plain "" else
   let labelWidth := items.foldl (fun acc it => max acc it.1.width) 0
   let prefixWidth := 2
@@ -106,7 +113,8 @@ def block
     (scheme : ColorScheme)
     (title : String)
     (body : Text)
-    : Text :=
+    : Text
+    :=
   if body.plainText.isEmpty then Text.plain ""
   else nl (Text.styled (title ++ ":") (sectionStyle scheme)) ++ body ++ Text.plain "\n"
 
@@ -114,7 +122,8 @@ private
 def examples
     (scheme : ColorScheme)
     (command : Command α)
-    : Text :=
+    : Text
+    :=
   if command.examples.isEmpty then Text.empty
   else
     let rows := command.examples.map fun sample =>
@@ -126,7 +135,8 @@ private
 def flagLabel
     (scheme : ColorScheme)
     (f : FlagInfo)
-    : Text :=
+    : Text
+    :=
   let long := Text.styled ("--" ++ f.long) (flagStyle scheme)
   let both := match f.short with
     | some c => Text.styled ("-" ++ c.toString) (flagStyle scheme) ++ Text.plain ", " ++ long
@@ -139,7 +149,8 @@ private
 def argLabel
     (scheme : ColorScheme)
     (a : ArgInfo)
-    : Text :=
+    : Text
+    :=
   Text.styled (ArgInfo.usage a) (argStyle scheme)
     ++ Text.styled (" " ++ a.typeName) (typeStyle scheme)
 
@@ -147,7 +158,8 @@ private
 def subcommandLabel
     (scheme : ColorScheme)
     (c : Command α)
-    : Text :=
+    : Text
+    :=
   let command := Text.styled c.name (commandStyle scheme)
   match c.body with
   | .subs _ => command
@@ -165,7 +177,8 @@ private
 def commandName
     (c : Command α)
     (path : List String)
-    : String :=
+    : String
+    :=
   if path.isEmpty then c.name else " ".intercalate path
 
 private
@@ -173,7 +186,8 @@ def titleText
     (scheme : ColorScheme)
     (c : Command α)
     (path : List String)
-    : Text :=
+    : Text
+    :=
   let names := if path.isEmpty then [c.name] else path
   let command := match names with
     | [] => Text.empty
@@ -195,7 +209,8 @@ def titleText
 private
 def globalFlags
     (scheme : ColorScheme)
-    : List (Text × Text) :=
+    : List (Text × Text)
+    :=
   [ (Text.styled "-h, --help" (flagStyle scheme),
       Text.styled "Show this help page" (descriptionStyle scheme))
   , (Text.styled "--version" (flagStyle scheme),
@@ -209,7 +224,8 @@ private
 def usageText
     (scheme : ColorScheme)
     (c : Command α)
-    : Text :=
+    : Text
+    :=
   let command := Text.styled c.name (commandStyle scheme)
   match c.body with
   | .subs _ => command
@@ -231,7 +247,8 @@ def render
     (scheme : ColorScheme := ColorScheme.catppuccin)
     (includeGlobals : Bool := false)
     (commandPath : List String := [])
-    : Text :=
+    : Text
+    :=
   let name := commandName c commandPath
   let description := if c.description.isEmpty then Text.empty else
     Layout.joinLines <| Layout.splitLines <| Layout.wrapLines width
@@ -271,14 +288,16 @@ def renderTo
     (scheme : ColorScheme := ColorScheme.catppuccin)
     (includeGlobals : Bool := false)
     (commandPath : List String := [])
-    : String :=
+    : String
+    :=
   Text.render target (render c width scheme includeGlobals commandPath)
 
 /-- Render errors with source labels for positioned value failures. -/
 def renderErrors
     (errs : List Err)
     (scheme : ColorScheme := ColorScheme.catppuccin)
-    : Text :=
+    : Text
+    :=
   let report := errorsToDiagnostics errs
   TermColor.Diagnostics.renderMany report.sources report.diagnostics {} scheme
 
