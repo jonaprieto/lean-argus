@@ -62,7 +62,8 @@ def cmd
     (description : String := "")
     (toolchain : Option String := none)
     (examples : List String := [])
-    : Command α :=
+    : Command α
+    :=
   { name, version, description, toolchain, globalOptions := none, body := .opts spec, examples }
 
 /-- Build a command group. -/
@@ -74,7 +75,8 @@ def group
     (description : String := "")
     (toolchain : Option String := none)
     (examples : List String := [])
-    : Command α :=
+    : Command α
+    :=
   { name, version, description, toolchain, globalOptions := none, body := .subs children, examples }
 
 /-- Build a command group with options shared by every subcommand. The option value is parsed
@@ -89,7 +91,8 @@ def groupWithOptions
     (description : String := "")
     (toolchain : Option String := none)
     (examples : List String := [])
-    : Command α :=
+    : Command α
+    :=
   { name, version, description, toolchain,
     globalOptions := some ⟨g, options⟩, body := .subs children, examples }
 
@@ -101,7 +104,8 @@ private
 def flagSpelling
     (flag : FlagInfo)
     (token : String)
-    : Bool :=
+    : Bool
+    :=
   let spelling := token.splitOn "=" |>.headD token
   spelling == "--" ++ flag.long ||
     match flag.short with
@@ -112,7 +116,8 @@ private
 def flagInfo?
     (metadata : Meta)
     (token : String)
-    : Option FlagInfo :=
+    : Option FlagInfo
+    :=
   metadata.flags.find? (flagSpelling · token)
 
 private
@@ -138,7 +143,8 @@ private
 def argumentAt?
     (args : List ArgInfo)
     (index : Nat)
-    : Option ArgInfo :=
+    : Option ArgInfo
+    :=
   match args[index]? with
   | some argument => some argument
   | none => args.reverse.find? (·.variadic)
@@ -146,20 +152,23 @@ def argumentAt?
 private
 def optionTarget
     (current : String)
-    : CompletionTarget :=
+    : CompletionTarget
+    :=
   if current.startsWith "-" then .option else .none
 
 private
 def globalFlagTakesValue
     (arg : String)
-    : Bool :=
+    : Bool
+    :=
   arg == "--completions" || arg.startsWith "--completions="
 
 private
 def groupFlagTakesValue
     (c : Command α)
     (arg : String)
-    : Bool :=
+    : Bool
+    :=
   globalFlagTakesValue arg ||
     match c.globalOptions with
     | none => false
@@ -173,7 +182,8 @@ private
 def splitSubcommand
     (c : Command α)
     (argv : List String)
-    : Option (List String × String × List String) :=
+    : Option (List String × String × List String)
+    :=
   let rec go : Nat → List String → List String → Option (List String × String × List String)
     | 0, _, _ => none
     | _, [], _ => none
@@ -195,7 +205,8 @@ def splitSubcommand
 def run
     (c : Command α)
     (argv : List String)
-    : Except (List Err) α :=
+    : Except (List Err) α
+    :=
   let rec go : Nat → Command α → List String → Except (List Err) α
     | 0, _, _ => .error [.custom "command nesting exceeded"]
     | fuel + 1, c, argv =>
@@ -226,7 +237,8 @@ asking for help after a typo should see. -/
 def resolvePath
     (c : Command α)
     (argv : List String)
-    : List String × Command α :=
+    : List String × Command α
+    :=
   let rec go : Nat → Command α → List String → List String → List String × Command α
     | 0, c, _, path => (path, c)
     | _, c, [], path => (path, c)
@@ -247,13 +259,15 @@ def resolvePath
 def resolve
     (c : Command α)
     (argv : List String)
-    : Command α :=
+    : Command α
+    :=
   (c.resolvePath argv).2
 
 /-- The command's erased metadata. -/
 def toMeta
     (c : Command α)
-    : Meta :=
+    : Meta
+    :=
   match c.body with
   | .opts spec => spec.toMeta
   | .subs _ => match c.globalOptions with
@@ -268,7 +282,8 @@ def completionContext
     (root : Command α)
     (before : List String)
     (current : String)
-    : CompletionContext α :=
+    : CompletionContext α
+    :=
   let (path, command) := root.resolvePath before
   match command.body with
   | .subs _ => { path, command, target := .subcommand }
@@ -296,7 +311,8 @@ def flagNames (c : Command α) : List String := c.toMeta.flags.map (·.long)
 /-- A command synopsis derived from the metadata. -/
 def usageLine
     (c : Command α)
-    : String :=
+    : String
+    :=
   match c.body with
   | .subs _ => c.name ++ " [OPTIONS] <COMMAND>"
   | .opts _ =>

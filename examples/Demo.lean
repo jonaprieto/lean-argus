@@ -113,7 +113,8 @@ private def demo : IO UInt32 := do
 
 def main
     (argv : List String)
-    : IO UInt32 :=
+    : IO UInt32
+    :=
   if argv.isEmpty then
     demo
   else

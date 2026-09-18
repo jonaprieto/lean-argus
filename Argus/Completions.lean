@@ -35,14 +35,16 @@ variable {α : Type}
 /-- Shell-word-safe: ASCII letters, digits, `-`, `_`. -/
 def isSafeName
     (s : String)
-    : Bool :=
+    : Bool
+    :=
   !s.isEmpty && s.all fun c =>
     c.isAlphanum || c == '-' || c == '_'
 
 private
 def invalidNames
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   match c with
   | ⟨_, _, _, _, _, .opts spec, _⟩ =>
     (spec.toMeta.flags.map (·.long)).filter (fun n => !isSafeName n)
@@ -60,14 +62,16 @@ decreasing_by
 safe to generate from. -/
 def validate
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   invalidNames c
 
 /-- Long and short flag words a shell should offer, unsafe names dropped. -/
 private
 def flagWords
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   let m := c.toMeta
   let longs := (m.flags.map (·.long)).filter isSafeName |>.map ("--" ++ ·)
   let shorts := m.flags.filterMap (fun f =>
@@ -81,14 +85,16 @@ filenames. `Param.path` is what sets this apart from `Param.str`. -/
 private
 def wantsFiles
     (c : Command α)
-    : Bool :=
+    : Bool
+    :=
   c.toMeta.args.any (fun a => a.completion == .path) ||
     c.toMeta.flags.any (fun f => f.completion == .path)
 
 private
 def subcommandNames
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   match c.body with
   | .opts _ => []
   | .subs children => children.map (·.name) |>.filter isSafeName
@@ -96,38 +102,44 @@ def subcommandNames
 private
 def safeName
     (c : Command α)
-    : String :=
+    : String
+    :=
   String.ofList (c.name.toList.map fun ch => if isSafeName ch.toString then ch else '_')
 
 private
 def commandTarget
     (c : Command α)
-    : String :=
+    : String
+    :=
   if isSafeName c.name then c.name else "_" ++ safeName c
 
 private
 def shellQuote
     (value : String)
-    : String :=
+    : String
+    :=
   "'" ++ value.replace "'" "'\\''" ++ "'"
 
 private
 def zshEscape
     (value : String)
-    : String :=
+    : String
+    :=
   (value.replace "\\" "\\\\").replace "]" "\\]"
 
 private
 def fishQuote
     (value : String)
-    : String :=
+    : String
+    :=
   "'" ++ (value.replace "\\" "\\\\").replace "'" "\\'" ++ "'"
 
 private
 def nodes
     (path : List String)
     (c : Command α)
-    : List (List String × Command α) :=
+    : List (List String × Command α)
+    :=
   match c with
   | ⟨_, _, _, _, _, .opts _, _⟩ => [(path, c)]
   | ⟨_, _, _, _, _, .subs children, _⟩ =>
@@ -143,7 +155,8 @@ decreasing_by
 private
 def pathKey
     (path : List String)
-    : String :=
+    : String
+    :=
   " ".intercalate path
 
 /-! ### bash -/
@@ -151,7 +164,8 @@ def pathKey
 private
 def bashWords
     (c : Command α)
-    : String :=
+    : String
+    :=
   match c.body with
   | .opts _ => " ".intercalate (flagWords c)
   | .subs _ => " ".intercalate (flagWords c ++ subcommandNames c)
@@ -159,7 +173,8 @@ def bashWords
 private
 def bashFiles
     (c : Command α)
-    : String :=
+    : String
+    :=
   if wantsFiles c then
     "      if [[ -z \"$cur\" || \"$cur\" != -* ]]; then\n" ++
     "        COMPREPLY+=( $(compgen -f -- \"$cur\") )\n" ++
@@ -169,7 +184,8 @@ def bashFiles
 private
 def bashArm
     (node : List String × Command α)
-    : String :=
+    : String
+    :=
   let path := pathKey node.1
   let c := node.2
   "    \"" ++ path ++ "\")\n" ++
@@ -181,7 +197,8 @@ def bashArm
 /-- A bash completion script. Source it, or drop it in /etc/bash_completion.d. -/
 def bash
     (c : Command α)
-    : String :=
+    : String
+    :=
   let fn := "_" ++ safeName c ++ "_completions"
   fn ++ "() {\n" ++
   "  local cur=\"${COMP_WORDS[COMP_CWORD]}\"\n" ++
@@ -205,7 +222,8 @@ def bash
 private
 def zshFlagSpec
     (f : FlagInfo)
-    : String :=
+    : String
+    :=
   let desc := zshEscape f.help
   let arg := match f.typeName with
     | none => ""
@@ -223,14 +241,16 @@ def zshFlagSpec
 private
 def zshFlagSpecs
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   c.toMeta.flags.filter (fun f => isSafeName f.long) |>.map zshFlagSpec
 
 private
 def zshLeafArm
     (path : List String)
     (c : Command α)
-    : String :=
+    : String
+    :=
   let specs := zshFlagSpecs c ++ (if wantsFiles c then ["'*:file:_files'"] else [])
   let body := if specs.isEmpty then
       "          :\n"
@@ -243,7 +263,8 @@ private
 def zshBranchArm
     (path : List String)
     (c : Command α)
-    : String :=
+    : String
+    :=
   let flags := zshFlagSpecs c
   let choices := match c.body with
     | .opts _ => []
@@ -265,7 +286,8 @@ def zshBranchArm
 private
 def zshArm
     (node : List String × Command α)
-    : String :=
+    : String
+    :=
   match node.2.body with
   | .opts _ => zshLeafArm node.1 node.2
   | .subs _ => zshBranchArm node.1 node.2
@@ -273,7 +295,8 @@ def zshArm
 /-- A zsh completion script using _arguments state dispatch and _describe. -/
 def zsh
     (c : Command α)
-    : String :=
+    : String
+    :=
   let fn := "_" ++ safeName c
   "#compdef " ++ commandTarget c ++ "\n" ++
   fn ++ "() {\n" ++
@@ -304,7 +327,8 @@ def zsh
 private
 def descendantNames
     (c : Command α)
-    : List String :=
+    : List String
+    :=
   match c with
   | ⟨_, _, _, _, _, .opts _, _⟩ => []
   | ⟨_, _, _, _, _, .subs children, _⟩ =>
@@ -320,7 +344,8 @@ private
 def fishCondition
     (path : List String)
     (c : Command α)
-    : Option String :=
+    : Option String
+    :=
   match path with
   | [] => match c.body with
     | .opts _ => none
@@ -335,7 +360,8 @@ def fishCondition
 private
 def fishWhen
     (condition : Option String)
-    : String :=
+    : String
+    :=
   match condition with
   | none => ""
   | some value => " -n " ++ fishQuote value
@@ -345,7 +371,8 @@ def fishFlagLine
     (target : String)
     (when : String)
     (f : FlagInfo)
-    : String :=
+    : String
+    :=
   let short := f.short.bind fun ch =>
     if isSafeName ch.toString then some (" -s " ++ ch.toString) else none
   let takesArg := if f.typeName.isSome then " -r" else ""
@@ -356,7 +383,8 @@ private
 def fishNodeLines
     (target : String)
     (node : List String × Command α)
-    : List String :=
+    : List String
+    :=
   let path := node.1
   let c := node.2
   let when := fishWhen (fishCondition path c)
@@ -377,7 +405,8 @@ def fishNodeLines
 /-- fish completions use command-line conditions for every safe node in the tree. -/
 def fish
     (c : Command α)
-    : String :=
+    : String
+    :=
   let target := commandTarget c
   "\n".intercalate ((nodes [] c).flatMap (fishNodeLines target)) ++ "\n"
 

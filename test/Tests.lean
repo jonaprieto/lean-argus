@@ -24,19 +24,22 @@ private
 def check
     (name : String)
     (ok : Bool)
-    : Option String :=
+    : Option String
+    :=
   if ok then none else some name
 
 private
 def hasSubstr
     (hay needle : String)
-    : Bool :=
+    : Bool
+    :=
   (hay.splitOn needle).length > 1
 
 private
 def maxLineLength
     (text : String)
-    : Nat :=
+    : Nat
+    :=
   text.splitOn "\n" |>.foldl (fun longest line => max longest line.length) 0
 
 private
@@ -44,7 +47,8 @@ def hasStyledSegment
     (text : TermColor.Text)
     (value : String)
     (style : TermColor.Style)
-    : Bool :=
+    : Bool
+    :=
   text.segments.any fun segment => segment.text == value && segment.style == style
 
 private def macroOptsChecks : List (Option String) :=
@@ -278,7 +282,8 @@ private
 def okIs
     (argv : List String)
     (expected : Opts)
-    : Bool :=
+    : Bool
+    :=
   match Argus.run optsSpec argv with
   | .ok o => o == expected
   | .error _ => false
@@ -286,7 +291,8 @@ def okIs
 private
 def errCount
     (argv : List String)
-    : Nat :=
+    : Nat
+    :=
   match Argus.run optsSpec argv with
   | .ok _ => 0
   | .error es => es.length
@@ -294,7 +300,8 @@ def errCount
 private
 def firstErr
     (argv : List String)
-    : String :=
+    : String
+    :=
   match Argus.run optsSpec argv with
   | .ok _ => "<no error>"
   | .error es => (es.head?.map Err.message).getD "<empty>"
@@ -513,7 +520,8 @@ private def contextCompletionApp : Command SubcommandResult :=
 private
 def completionArm
     (script path : String)
-    : String :=
+    : String
+    :=
   match script.splitOn ("    \"" ++ path ++ "\")") with
   | _ :: rest =>
     match rest with

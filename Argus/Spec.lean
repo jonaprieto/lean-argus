@@ -60,7 +60,8 @@ namespace ArgInfo
 /-- Render the argument in a command synopsis. -/
 def usage
     (argument : ArgInfo)
-    : String :=
+    : String
+    :=
   let body := "<" ++ argument.name ++ ">" ++ if argument.variadic then "..." else ""
   if argument.optional then "[" ++ body ++ "]" else body
 
@@ -120,14 +121,16 @@ def flagInfo
     (help : String)
     (typeName : Option String)
     (completion : CompletionKind)
-    : FlagInfo :=
+    : FlagInfo
+    :=
   { long, short, help, typeName, completion }
 
 private
 def argInfo
     (name help : String)
     (p : Param α)
-    : ArgInfo :=
+    : ArgInfo
+    :=
   { name, help, typeName := p.typeName, variadic := false, completion := p.completion }
 
 /-- Project the erased metadata. Help and completions read only this. -/
@@ -154,13 +157,15 @@ def toMeta
 /-- Every long flag name reachable from this spec. -/
 def flagNames
     (s : Spec g α)
-    : List String :=
+    : List String
+    :=
   s.toMeta.flags.map (·.long)
 
 /-- Every short flag name reachable from this spec. -/
 def shortNames
     (s : Spec g α)
-    : List Char :=
+    : List Char
+    :=
   s.toMeta.flags.filterMap (·.short)
 
 /-! ### Combinator surface

@@ -23,7 +23,8 @@ structure DiagnosticReport where
 private
 def sourceFor
     (err : Err)
-    : Source :=
+    : Source
+    :=
   match err with
   | .badValue flag given _ => Source.named s!"value for --{flag}" given
   | _ => Source.named "" ""
@@ -31,7 +32,8 @@ def sourceFor
 private
 def expectedText
     (expected : List String)
-    : String :=
+    : String
+    :=
   if expected.isEmpty then "unexpected input"
   else "expected " ++ ", ".intercalate expected
 
@@ -39,7 +41,8 @@ private
 def diagnosticFor
     (index : SourceId)
     (err : Err)
-    : Diagnostic :=
+    : Diagnostic
+    :=
   match err with
   | .badValue flag _ parseError =>
     (Diagnostic.error s!"invalid value for '--{flag}'").withLabel
@@ -57,7 +60,8 @@ def indexed
 /-- Convert Argus errors to sources and structured diagnostics for a pure renderer. -/
 def errorsToDiagnostics
     (errs : List Err)
-    : DiagnosticReport :=
+    : DiagnosticReport
+    :=
   { sources := errs.toArray.map sourceFor
     diagnostics := indexed 0 errs |>.map fun (index, err) => diagnosticFor index err }
 
