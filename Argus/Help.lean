@@ -36,19 +36,37 @@ open scoped TermColor.Style
 
 variable {α : Type}
 
-private def sectionStyle (scheme : ColorScheme) : Style :=
+private
+def sectionStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.bold <+> Style.fg scheme.purple
-private def commandStyle (scheme : ColorScheme) : Style :=
+private
+def commandStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.bold <+> Style.fg scheme.cyan
-private def titleCommandStyle (scheme : ColorScheme) : Style :=
+private
+def titleCommandStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.bold <+> Style.underline <+> Style.fg scheme.pink
-private def flagStyle (scheme : ColorScheme) : Style :=
+private
+def flagStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.bold <+> Style.fg scheme.green
-private def argStyle (scheme : ColorScheme) : Style :=
+private
+def argStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.bold <+> Style.fg scheme.yellow
 private def typeStyle (scheme : ColorScheme) : Style := Style.fg scheme.orange
 private def descriptionStyle (scheme : ColorScheme) : Style := Style.fg scheme.foreground
-private def mutedStyle (scheme : ColorScheme) : Style :=
+private
+def mutedStyle
+    (scheme : ColorScheme)
+    : Style :=
   Style.dim <+> Style.fg scheme.comment
 
 private def nl (t : Text) : Text := t ++ Text.plain "\n"
@@ -59,7 +77,11 @@ Only the label column is padded. `Layout.columns` would be shorter, but it align
 column including the last, which leaves trailing spaces on every help line. Splitting the
 wrapped description with `Layout.splitLines` and indenting the continuation lines by hand
 gives the same alignment with no trailing whitespace. -/
-private def rows (width : Nat) (items : List (Text × Text)) : Text :=
+private
+def rows
+    (width : Nat)
+    (items : List (Text × Text))
+    : Text :=
   if items.isEmpty then Text.plain "" else
   let labelWidth := items.foldl (fun acc it => max acc it.1.width) 0
   let prefixWidth := 2
@@ -79,11 +101,20 @@ private def rows (width : Nat) (items : List (Text × Text)) : Text :=
         ((rowPrefix ++ Layout.padRight labelWidth label ++ sep ++ first) :: rest.map (indent ++ ·)))
     ++ Text.plain "\n"
 
-private def block (scheme : ColorScheme) (title : String) (body : Text) : Text :=
+private
+def block
+    (scheme : ColorScheme)
+    (title : String)
+    (body : Text)
+    : Text :=
   if body.plainText.isEmpty then Text.plain ""
   else nl (Text.styled (title ++ ":") (sectionStyle scheme)) ++ body ++ Text.plain "\n"
 
-private def examples (scheme : ColorScheme) (command : Command α) : Text :=
+private
+def examples
+    (scheme : ColorScheme)
+    (command : Command α)
+    : Text :=
   if command.examples.isEmpty then Text.empty
   else
     let rows := command.examples.map fun sample =>
@@ -91,7 +122,11 @@ private def examples (scheme : ColorScheme) (command : Command α) : Text :=
     block scheme "EXAMPLES" (Layout.joinLines rows ++ Text.plain "\n")
 
 /-- `-i, --ignore-case` or `-j, --jobs NAT`. -/
-private def flagLabel (scheme : ColorScheme) (f : FlagInfo) : Text :=
+private
+def flagLabel
+    (scheme : ColorScheme)
+    (f : FlagInfo)
+    : Text :=
   let long := Text.styled ("--" ++ f.long) (flagStyle scheme)
   let both := match f.short with
     | some c => Text.styled ("-" ++ c.toString) (flagStyle scheme) ++ Text.plain ", " ++ long
@@ -100,11 +135,19 @@ private def flagLabel (scheme : ColorScheme) (f : FlagInfo) : Text :=
   | none => both
   | some t => both ++ Text.styled (" " ++ t) (typeStyle scheme)
 
-private def argLabel (scheme : ColorScheme) (a : ArgInfo) : Text :=
+private
+def argLabel
+    (scheme : ColorScheme)
+    (a : ArgInfo)
+    : Text :=
   Text.styled (ArgInfo.usage a) (argStyle scheme)
     ++ Text.styled (" " ++ a.typeName) (typeStyle scheme)
 
-private def subcommandLabel (scheme : ColorScheme) (c : Command α) : Text :=
+private
+def subcommandLabel
+    (scheme : ColorScheme)
+    (c : Command α)
+    : Text :=
   let command := Text.styled c.name (commandStyle scheme)
   match c.body with
   | .subs _ => command
@@ -118,10 +161,19 @@ private def subcommandLabel (scheme : ColorScheme) (c : Command α) : Text :=
       Text.styled (" " ++ ArgInfo.usage a) (argStyle scheme)
     command ++ flags ++ args
 
-private def commandName (c : Command α) (path : List String) : String :=
+private
+def commandName
+    (c : Command α)
+    (path : List String)
+    : String :=
   if path.isEmpty then c.name else " ".intercalate path
 
-private def titleText (scheme : ColorScheme) (c : Command α) (path : List String) : Text :=
+private
+def titleText
+    (scheme : ColorScheme)
+    (c : Command α)
+    (path : List String)
+    : Text :=
   let names := if path.isEmpty then [c.name] else path
   let command := match names with
     | [] => Text.empty
@@ -140,7 +192,10 @@ private def titleText (scheme : ColorScheme) (c : Command α) (path : List Strin
     | none => Text.empty
   command ++ version ++ toolchain
 
-private def globalFlags (scheme : ColorScheme) : List (Text × Text) :=
+private
+def globalFlags
+    (scheme : ColorScheme)
+    : List (Text × Text) :=
   [ (Text.styled "-h, --help" (flagStyle scheme),
       Text.styled "Show this help page" (descriptionStyle scheme))
   , (Text.styled "--version" (flagStyle scheme),
@@ -150,7 +205,11 @@ private def globalFlags (scheme : ColorScheme) : List (Text × Text) :=
       Text.styled "Print a shell completion script" (descriptionStyle scheme))
   ]
 
-private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
+private
+def usageText
+    (scheme : ColorScheme)
+    (c : Command α)
+    : Text :=
   let command := Text.styled c.name (commandStyle scheme)
   match c.body with
   | .subs _ => command
@@ -166,7 +225,9 @@ private def usageText (scheme : ColorScheme) (c : Command α) : Text :=
 
 /-- Render a command's help page. Descriptions wrap to `width` (default 80), and `includeGlobals`
 adds the standard `Argus.Term` controls. -/
-def render (c : Command α) (width : Nat := 80)
+def render
+    (c : Command α)
+    (width : Nat := 80)
     (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false)
     (commandPath : List String := []) : Text :=
   let name := commandName c commandPath
@@ -201,14 +262,19 @@ def render (c : Command α) (width : Nat := 80)
   header ++ block scheme "USAGE" (nl (Text.plain "  " ++ usage)) ++ body ++ examples scheme c
 
 /-- Render to a string for a known target. -/
-def renderTo (target : RenderTarget) (c : Command α) (width : Nat := 80)
+def renderTo
+    (target : RenderTarget)
+    (c : Command α)
+    (width : Nat := 80)
     (scheme : ColorScheme := ColorScheme.catppuccin) (includeGlobals : Bool := false)
     (commandPath : List String := []) : String :=
   Text.render target (render c width scheme includeGlobals commandPath)
 
 /-- Render errors with source labels for positioned value failures. -/
-def renderErrors (errs : List Err)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : Text :=
+def renderErrors
+    (errs : List Err)
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    : Text :=
   let report := errorsToDiagnostics errs
   TermColor.Diagnostics.renderMany report.sources report.diagnostics {} scheme
 
