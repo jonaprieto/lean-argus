@@ -47,9 +47,7 @@ def hasStyledSegment
     : Bool :=
   text.segments.any fun segment => segment.text == value && segment.style == style
 
-private
-def macroOptsChecks
-    : List (Option String) :=
+private def macroOptsChecks : List (Option String) :=
   let parse (argv : List String) : Option (Bool × Nat × List String) :=
     match Argus.run MacroOpts.spec argv with
     | .ok o => some (o.verbose, o.jobs, o.files)
@@ -67,9 +65,7 @@ def macroOptsChecks
 
 /-! ### Param -/
 
-private
-def paramChecks
-    : List (Option String) :=
+private def paramChecks : List (Option String) :=
   [ check "nat decodes 42"
       (Param.nat.decode "42" matches .ok 42)
   , check "nat rejects trailing junk (eof enforced)"
@@ -91,9 +87,7 @@ def paramChecks
       ((Param.nat.map (· * 2)).decode "21" matches .ok 42)
   ]
 
-private
-def newParamChecks
-    : List (Option String) :=
+private def newParamChecks : List (Option String) :=
   [ check "int accepts a leading minus"
       (Param.int.decode "-42" matches .ok (-42 : Int))
   , check "int rejects trailing junk"
@@ -133,9 +127,7 @@ def newParamChecks
   ]
 
 /-- Error positions are columns within the value, not offsets into a joined argv. -/
-private
-def errorPositionCheck
-    : Option String :=
+private def errorPositionCheck : Option String :=
   match Param.nat.decode "12x" with
   | .error e => check "error column points inside the value" (e.pos == 2)
   | .ok _ => some "expected a failure on 12x"
@@ -173,9 +165,7 @@ private def altThenArgSpec :=
       (Spec.const "fallback"))
     (Spec.arg "TEXT" "Text" Param.str)
 
-private
-def specChecks
-    : List (Option String) :=
+private def specChecks : List (Option String) :=
   [ check "const returns its value"
       (Argus.run (Spec.const 7) [] matches .ok 7)
   , check "const consumes nothing before a positional"
@@ -203,9 +193,7 @@ def specChecks
   ]
 
 /-- Unclaimed input is a user error, not something to drop quietly. -/
-private
-def leftoverChecks
-    : List (Option String) :=
+private def leftoverChecks : List (Option String) :=
   let one := Spec.arg "X" "x" Param.str
   let msgs (argv : List String) : List String :=
     match Argus.run one argv with
@@ -227,9 +215,7 @@ def leftoverChecks
 
 /-! ### Resolving a subcommand path for --help -/
 
-private
-def resolveChecks
-    : List (Option String) :=
+private def resolveChecks : List (Option String) :=
   -- All children of a group share one result type; the application supplies the sum.
   let leaf := Argus.cmd "leaf"
     (Spec.map (fun (s : String) => s) (Spec.arg "S" "s" Param.str)) (description := "L")
@@ -260,9 +246,7 @@ def resolveChecks
 
 /-! ### Edit distance (backs "did you mean") -/
 
-private
-def editDistanceChecks
-    : List (Option String) :=
+private def editDistanceChecks : List (Option String) :=
   [ check "identical strings" (editDistance "abc" "abc" == 0)
   , check "one deletion" (editDistance "jobs" "jbs" == 1)
   , check "one deletion in a longer name" (editDistance "ignore-case" "ignor-case" == 1)
@@ -327,9 +311,7 @@ def firstErr
 
 /-! ### Spec metadata -/
 
-private
-def metaChecks
-    : List (Option String) :=
+private def metaChecks : List (Option String) :=
   [ check "toMeta lists both flags"
       (optsSpec.flagNames == ["ignore-case", "jobs"])
   , check "toMeta lists both short names"
@@ -350,9 +332,7 @@ def metaChecks
 
 /-! ### Runner -/
 
-private
-def runnerChecks
-    : List (Option String) :=
+private def runnerChecks : List (Option String) :=
   [ check "attached value: --jobs=2"
       (okIs ["-i", "--jobs=2", "needle", "a.txt", "b.txt"]
         ⟨true, 2, "needle", ["a.txt", "b.txt"]⟩)
@@ -381,9 +361,7 @@ def runnerChecks
   ]
 
 /-- Message quality: positioned value errors and edit-distance suggestions. -/
-private
-def messageChecks
-    : List (Option String) :=
+private def messageChecks : List (Option String) :=
   [ check "bad value reports the column inside the value"
       (hasSubstr (firstErr ["--jobs=12x", "needle"]) "at column 2")
   , check "bad value names what was expected, not grip internals"
@@ -394,9 +372,7 @@ def messageChecks
       ((firstErr ["--zzzzzzz=2", "needle", "--jobs=1"]).endsWith "unknown flag '--zzzzzzz=2'")
   ]
 
-private
-def diagnosticChecks
-    : List (Option String) :=
+private def diagnosticChecks : List (Option String) :=
   let rendered := match Argus.run optsSpec ["--jobs=12x", "needle"] with
     | .ok _ => ""
     | .error errs => (Help.renderErrors errs).plainText
@@ -413,50 +389,36 @@ inductive SubcommandResult where
   | status (verbose : Bool)
   deriving BEq
 
-private
-def buildCommand
-    : Command SubcommandResult :=
+private def buildCommand : Command SubcommandResult :=
   Argus.cmd "build"
     (Spec.map SubcommandResult.build
       (Spec.switch "force" (some 'f') "Build even when unchanged"))
     (description := "Build the project")
 
-private
-def statusCommand
-    : Command SubcommandResult :=
+private def statusCommand : Command SubcommandResult :=
   Argus.cmd "status"
     (Spec.map SubcommandResult.status
       (Spec.switch "verbose" (some 'v') "Show detailed status"))
     (description := "Show project status")
 
-private
-def adminCommand
-    : Command SubcommandResult :=
+private def adminCommand : Command SubcommandResult :=
   Argus.group "admin" [statusCommand] (description := "Administrative commands")
 
-private
-def echoCommand
-    : Command SubcommandResult :=
+private def echoCommand : Command SubcommandResult :=
   Argus.cmd "echo"
     (Spec.map SubcommandResult.echo (Spec.arg "VALUE" "Value to echo" Param.str))
     (description := "Echo a value")
 
-private
-def subcommandApp
-    : Command SubcommandResult :=
+private def subcommandApp : Command SubcommandResult :=
   Argus.group "tool" [buildCommand, adminCommand, echoCommand]
 
-private
-def globalOptionApp
-    : Command SubcommandResult :=
+private def globalOptionApp : Command SubcommandResult :=
   Argus.groupWithOptions "tool"
     (Spec.map (fun (_ : Bool) => ())
       (Spec.switch "verbose" (some 'v') "Show detailed output"))
     [buildCommand, adminCommand, echoCommand]
 
-private
-def subcommandChecks
-    : List (Option String) :=
+private def subcommandChecks : List (Option String) :=
   let help := (Help.render subcommandApp 80).plainText
   let globalHelp := (Help.render subcommandApp 80 (includeGlobals := true)).plainText
   let optionHelp := (Help.render globalOptionApp 80 (includeGlobals := true)).plainText
@@ -534,23 +496,17 @@ def subcommandChecks
       (match argumentContext.target with | .argument info => info.name == "VALUE" | _ => false)
   ]
 
-private
-def completionLeafCommand
-    : Command SubcommandResult :=
+private def completionLeafCommand : Command SubcommandResult :=
   Argus.cmd "leaf"
     (Spec.map (fun (_ : Bool) => SubcommandResult.status true)
       (Spec.switch "verbose" (some 'v') "Leaf verbosity"))
 
-private
-def unsafeCompletionCommand
-    : Command SubcommandResult :=
+private def unsafeCompletionCommand : Command SubcommandResult :=
   Argus.cmd "bad;name"
     (Spec.map (fun (_ : Bool) => SubcommandResult.echo "unsafe")
       (Spec.switch "unsafe" none "Unsafe command"))
 
-private
-def contextCompletionApp
-    : Command SubcommandResult :=
+private def contextCompletionApp : Command SubcommandResult :=
   Argus.group "tool"
     [buildCommand, Argus.group "inner" [completionLeafCommand], unsafeCompletionCommand]
 
@@ -568,9 +524,7 @@ def completionArm
     | [] => ""
   | [] => ""
 
-private
-def completionContextChecks
-    : List (Option String) :=
+private def completionContextChecks : List (Option String) :=
   let bash := Completions.bash contextCompletionApp
   let zsh := Completions.zsh contextCompletionApp
   let fish := Completions.fish contextCompletionApp
@@ -605,9 +559,7 @@ def completionContextChecks
         && hasSubstr (Completions.fish plainLeaf) "plain-flag")
   ]
 
-private
-def completionSafetyChecks
-    : List (Option String) :=
+private def completionSafetyChecks : List (Option String) :=
   let quoted := Argus.cmd "quoted"
     (Spec.map (fun (_ : Bool) => SubcommandResult.status true)
       (Spec.switch "quoted" none "it's ] \\ $ (metadata)"))
@@ -633,9 +585,7 @@ private def longCmd :=
 
 /-- Rendered at 40 columns, the description must wrap, continuation lines must be
 indented under the description column, and no line may carry trailing whitespace. -/
-private
-def helpChecks
-    : List (Option String) :=
+private def helpChecks : List (Option String) :=
   let scheme := TermColor.ColorScheme.monokai
   let themedFlagStyle := TermColor.Style.combine TermColor.Style.bold
     (TermColor.Style.fg scheme.green)

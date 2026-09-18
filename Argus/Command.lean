@@ -60,7 +60,9 @@ def cmd
     (spec : Spec g α)
     (version : Option String := none)
     (description : String := "")
-    (toolchain : Option String := none) (examples : List String := []) : Command α :=
+    (toolchain : Option String := none)
+    (examples : List String := [])
+    : Command α :=
   { name, version, description, toolchain, globalOptions := none, body := .opts spec, examples }
 
 /-- Build a command group. -/
@@ -70,7 +72,9 @@ def group
     (children : List (Command α))
     (version : Option String := none)
     (description : String := "")
-    (toolchain : Option String := none) (examples : List String := []) : Command α :=
+    (toolchain : Option String := none)
+    (examples : List String := [])
+    : Command α :=
   { name, version, description, toolchain, globalOptions := none, body := .subs children, examples }
 
 /-- Build a command group with options shared by every subcommand. The option value is parsed
@@ -82,8 +86,10 @@ def groupWithOptions
     (options : Spec g Unit)
     (children : List (Command α))
     (version : Option String := none)
-    (description : String := "") (toolchain : Option String := none)
-    (examples : List String := []) : Command α :=
+    (description : String := "")
+    (toolchain : Option String := none)
+    (examples : List String := [])
+    : Command α :=
   { name, version, description, toolchain,
     globalOptions := some ⟨g, options⟩, body := .subs children, examples }
 
