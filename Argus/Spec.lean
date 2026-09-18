@@ -58,7 +58,9 @@ deriving Repr, BEq, Inhabited
 namespace ArgInfo
 
 /-- Render the argument in a command synopsis. -/
-def usage (argument : ArgInfo) : String :=
+def usage
+    (argument : ArgInfo)
+    : String :=
   let body := "<" ++ argument.name ++ ">" ++ if argument.variadic then "..." else ""
   if argument.optional then "[" ++ body ++ "]" else body
 
@@ -80,7 +82,11 @@ def Meta.empty : Meta := { flags := [], args := [] }
 
 /-- Grade-indexed command spec. `Type 1` is forced by `ap` existentially quantifying its
 intermediate type, as in any free applicative. -/
-inductive Spec : Grade → Type → Type 1 where
+inductive Spec
+    : Grade →
+      Type →
+      Type 1
+    where
   /-- A constant. Consumes nothing, cannot fail. -/
   | const {α : Type} (a : α) : Spec 1 α
   /-- A boolean flag taking no value. Absent means `false`, so it cannot fail. -/
@@ -107,15 +113,29 @@ namespace Spec
 
 variable {α β : Type} {g g₁ g₂ : Grade}
 
-private def flagInfo (long : String) (short : Option Char) (help : String)
-    (typeName : Option String) (completion : CompletionKind) : FlagInfo :=
+private
+def flagInfo
+    (long : String)
+    (short : Option Char)
+    (help : String)
+    (typeName : Option String)
+    (completion : CompletionKind)
+    : FlagInfo :=
   { long, short, help, typeName, completion }
 
-private def argInfo (name help : String) (p : Param α) : ArgInfo :=
+private
+def argInfo
+    (name help : String)
+    (p : Param α)
+    : ArgInfo :=
   { name, help, typeName := p.typeName, variadic := false, completion := p.completion }
 
 /-- Project the erased metadata. Help and completions read only this. -/
-def toMeta : {g : Grade} → {α : Type} → Spec g α → Meta
+def toMeta
+    : {g : Grade} →
+      {α : Type} →
+      Spec g α →
+      Meta
   | _, _, .const _ => Meta.empty
   | _, _, .switch l s h => { flags := [flagInfo l s h none .none], args := [] }
   | _, _, .flag l s h p =>
@@ -132,11 +152,15 @@ def toMeta : {g : Grade} → {α : Type} → Spec g α → Meta
     { flags := m.flags, args := m.args.map ({ · with variadic := true }) }
 
 /-- Every long flag name reachable from this spec. -/
-def flagNames (s : Spec g α) : List String :=
+def flagNames
+    (s : Spec g α)
+    : List String :=
   s.toMeta.flags.map (·.long)
 
 /-- Every short flag name reachable from this spec. -/
-def shortNames (s : Spec g α) : List Char :=
+def shortNames
+    (s : Spec g α)
+    : List Char :=
   s.toMeta.flags.filterMap (·.short)
 
 /-! ### Combinator surface

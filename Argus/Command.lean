@@ -44,28 +44,44 @@ inductive CompletionTarget where
 deriving Repr, BEq, Inhabited
 
 /-- Structural command context at an interactive cursor. -/
-structure CompletionContext (α : Type) where
+structure CompletionContext
+    (α : Type)
+    where
   path : List String
   command : Command α
   target : CompletionTarget
 
 /-- Build a command. Prefer this over the structure literal: the grade is inferred from
 the spec, so callers never write one. -/
-def cmd {g : Grade} {α : Type} (name : String) (spec : Spec g α)
-    (version : Option String := none) (description : String := "")
+def cmd
+    {g : Grade}
+    {α : Type}
+    (name : String)
+    (spec : Spec g α)
+    (version : Option String := none)
+    (description : String := "")
     (toolchain : Option String := none) (examples : List String := []) : Command α :=
   { name, version, description, toolchain, globalOptions := none, body := .opts spec, examples }
 
 /-- Build a command group. -/
-def group {α : Type} (name : String) (children : List (Command α))
-    (version : Option String := none) (description : String := "")
+def group
+    {α : Type}
+    (name : String)
+    (children : List (Command α))
+    (version : Option String := none)
+    (description : String := "")
     (toolchain : Option String := none) (examples : List String := []) : Command α :=
   { name, version, description, toolchain, globalOptions := none, body := .subs children, examples }
 
 /-- Build a command group with options shared by every subcommand. The option value is parsed
 and discarded; child commands still produce the group's result. -/
-def groupWithOptions {g : Grade} {α : Type} (name : String) (options : Spec g Unit)
-    (children : List (Command α)) (version : Option String := none)
+def groupWithOptions
+    {g : Grade}
+    {α : Type}
+    (name : String)
+    (options : Spec g Unit)
+    (children : List (Command α))
+    (version : Option String := none)
     (description : String := "") (toolchain : Option String := none)
     (examples : List String := []) : Command α :=
   { name, version, description, toolchain,
@@ -75,17 +91,29 @@ namespace Command
 
 variable {α : Type}
 
-private def flagSpelling (flag : FlagInfo) (token : String) : Bool :=
+private
+def flagSpelling
+    (flag : FlagInfo)
+    (token : String)
+    : Bool :=
   let spelling := token.splitOn "=" |>.headD token
   spelling == "--" ++ flag.long ||
     match flag.short with
     | some short => spelling == "-" ++ short.toString
     | none => false
 
-private def flagInfo? (metadata : Meta) (token : String) : Option FlagInfo :=
+private
+def flagInfo?
+    (metadata : Meta)
+    (token : String)
+    : Option FlagInfo :=
   metadata.flags.find? (flagSpelling · token)
 
-private def positionalTokens (metadata : Meta) : List String → List String
+private
+def positionalTokens
+    (metadata : Meta)
+    : List String →
+      List String
   | [] => []
   | "--" :: rest => rest
   | token :: rest =>
@@ -100,18 +128,32 @@ private def positionalTokens (metadata : Meta) : List String → List String
           if token.startsWith "-" then positionalTokens metadata rest
           else token :: positionalTokens metadata rest
 
-private def argumentAt? (args : List ArgInfo) (index : Nat) : Option ArgInfo :=
+private
+def argumentAt?
+    (args : List ArgInfo)
+    (index : Nat)
+    : Option ArgInfo :=
   match args[index]? with
   | some argument => some argument
   | none => args.reverse.find? (·.variadic)
 
-private def optionTarget (current : String) : CompletionTarget :=
+private
+def optionTarget
+    (current : String)
+    : CompletionTarget :=
   if current.startsWith "-" then .option else .none
 
-private def globalFlagTakesValue (arg : String) : Bool :=
+private
+def globalFlagTakesValue
+    (arg : String)
+    : Bool :=
   arg == "--completions" || arg.startsWith "--completions="
 
-private def groupFlagTakesValue (c : Command α) (arg : String) : Bool :=
+private
+def groupFlagTakesValue
+    (c : Command α)
+    (arg : String)
+    : Bool :=
   globalFlagTakesValue arg ||
     match c.globalOptions with
     | none => false
@@ -121,8 +163,11 @@ private def groupFlagTakesValue (c : Command α) (arg : String) : Bool :=
           | some ch => ch.toString == arg.drop 1
           | none => false)
 
-private def splitSubcommand (c : Command α) (argv : List String) :
-    Option (List String × String × List String) :=
+private
+def splitSubcommand
+    (c : Command α)
+    (argv : List String)
+    : Option (List String × String × List String) :=
   let rec go : Nat → List String → List String → Option (List String × String × List String)
     | 0, _, _ => none
     | _, [], _ => none
@@ -141,7 +186,10 @@ private def splitSubcommand (c : Command α) (argv : List String) :
   go (argv.length + 1) argv []
 
 /-- Parse argv against this command's spec. -/
-def run (c : Command α) (argv : List String) : Except (List Err) α :=
+def run
+    (c : Command α)
+    (argv : List String)
+    : Except (List Err) α :=
   let rec go : Nat → Command α → List String → Except (List Err) α
     | 0, _, _ => .error [.custom "command nesting exceeded"]
     | fuel + 1, c, argv =>
@@ -169,7 +217,10 @@ def run (c : Command α) (argv : List String) : Except (List Err) α :=
 Flags are stepped over, so `tool --verbose build --help` still resolves to `build`. An
 unrecognised name stops the walk and yields the last good command, which is what a user
 asking for help after a typo should see. -/
-def resolvePath (c : Command α) (argv : List String) : List String × Command α :=
+def resolvePath
+    (c : Command α)
+    (argv : List String)
+    : List String × Command α :=
   let rec go : Nat → Command α → List String → List String → List String × Command α
     | 0, c, _, path => (path, c)
     | _, c, [], path => (path, c)
@@ -187,11 +238,16 @@ def resolvePath (c : Command α) (argv : List String) : List String × Command �
   go (argv.length + 1) c argv [c.name]
 
 /-- Follow subcommand names as far as they match, returning the deepest command reached. -/
-def resolve (c : Command α) (argv : List String) : Command α :=
+def resolve
+    (c : Command α)
+    (argv : List String)
+    : Command α :=
   (c.resolvePath argv).2
 
 /-- The command's erased metadata. -/
-def toMeta (c : Command α) : Meta :=
+def toMeta
+    (c : Command α)
+    : Meta :=
   match c.body with
   | .opts spec => spec.toMeta
   | .subs _ => match c.globalOptions with
@@ -202,8 +258,11 @@ def toMeta (c : Command α) : Meta :=
 
 The caller owns tokenization and cursor ranges; Argus owns command-path resolution, flag-value
 consumption, and positional argument identity. -/
-def completionContext (root : Command α) (before : List String) (current : String) :
-    CompletionContext α :=
+def completionContext
+    (root : Command α)
+    (before : List String)
+    (current : String)
+    : CompletionContext α :=
   let (path, command) := root.resolvePath before
   match command.body with
   | .subs _ => { path, command, target := .subcommand }
@@ -229,7 +288,9 @@ def completionContext (root : Command α) (before : List String) (current : Stri
 def flagNames (c : Command α) : List String := c.toMeta.flags.map (·.long)
 
 /-- A command synopsis derived from the metadata. -/
-def usageLine (c : Command α) : String :=
+def usageLine
+    (c : Command α)
+    : String :=
   match c.body with
   | .subs _ => c.name ++ " [OPTIONS] <COMMAND>"
   | .opts _ =>

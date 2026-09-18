@@ -19,7 +19,9 @@ open TermColor
 
 private def demoScheme : ColorScheme := ColorScheme.catppuccin
 
-private def buildCommand : Command String :=
+private
+def buildCommand
+    : Command String :=
   Argus.cmd "build"
     (Spec.map2 (fun (old : Bool) (targets : List String) =>
         s!"build old={old} targets={targets}")
@@ -27,7 +29,9 @@ private def buildCommand : Command String :=
       (Spec.many (Spec.arg "targets" "Targets to build" Param.str)))
     (description := "build targets")
 
-private def queryCommand : Command String :=
+private
+def queryCommand
+    : Command String :=
   Argus.cmd "query"
     (Spec.map2 (fun (jobs : Nat) (rest : Bool × Bool × List String) =>
         s!"query jobs={jobs} json={rest.1} text={rest.2.1} targets={rest.2.2}")
@@ -40,7 +44,9 @@ private def queryCommand : Command String :=
     (description :=
       "build targets and output results while preserving independent diagnostics for every target")
 
-private def inspectCommand : Command String :=
+private
+def inspectCommand
+    : Command String :=
   Argus.cmd "inspect"
     (Spec.map (fun (file : String) => s!"inspect {file}")
       (Spec.arg "file" "Lean source file" Param.path))
@@ -52,7 +58,9 @@ private def toolOptions :=
       (Spec.switch "verbose" (some 'v') "Enable verbose output")
       (Spec.switch "dry-run" (some 'd') "Preview changes without applying them"))
 
-private def tool : Command String :=
+private
+def tool
+    : Command String :=
   Argus.groupWithOptions "tool" toolOptions
     [ buildCommand
     , queryCommand
@@ -105,7 +113,9 @@ private def demo : IO UInt32 := do
 
   pure 0
 
-def main (argv : List String) : IO UInt32 :=
+def main
+    (argv : List String)
+    : IO UInt32 :=
   if argv.isEmpty then
     demo
   else

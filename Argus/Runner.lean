@@ -43,7 +43,9 @@ inductive Err where
   deriving Inhabited
 
 /-- Render a failure for the terminal. -/
-def Err.message : Err → String
+def Err.message
+    : Err →
+      String
   | .unknownFlag g none => s!"unknown flag '{g}'"
   | .unknownFlag g (some d) => s!"unknown flag '{g}'; did you mean '--{d}'?"
   | .missingSubcommand c available =>
@@ -71,7 +73,10 @@ structure Tokens where
   deriving Inhabited
 
 /-- Split `--name=value` into its parts. -/
-private def splitEq (s : String) : String × Option String :=
+private
+def splitEq
+    (s : String)
+    : String × Option String :=
   match s.splitOn "=" with
   | [] => (s, none)
   | [only] => (only, none)
@@ -86,7 +91,10 @@ property pays for itself.
 
 Short flags are recorded under their single-character name; the interpreter resolves
 them against the spec's short names. Everything after a bare `--` is positional. -/
-def tokenize (takesValue : String → Bool) (argv : List String) : Tokens :=
+def tokenize
+    (takesValue : String → Bool)
+    (argv : List String)
+    : Tokens :=
   go (argv.length + 1) argv { flags := [], positionals := [] }
 where
   go : Nat → List String → Tokens → Tokens
@@ -129,7 +137,9 @@ structure St where
 /-- Levenshtein distance, for "did you mean". Standard row-wise dynamic program:
 `prev` is the previous row, `cur` is built left to right taking the best of insertion,
 deletion, and substitution. -/
-def editDistance (a b : String) : Nat :=
+def editDistance
+    (a b : String)
+    : Nat :=
   let bs := b.toList
   let init : List Nat := List.range (bs.length + 1)
   let final := a.toList.foldl (fun prev ac =>
@@ -147,14 +157,21 @@ def editDistance (a b : String) : Nat :=
   final.getLastD 0
 
 /-- Closest known flag name, when it is close enough to be worth suggesting. -/
-def suggest (known : List String) (given : String) : Option String :=
+def suggest
+    (known : List String)
+    (given : String)
+    : Option String :=
   let scored := known.map (fun k => (editDistance k given, k))
   match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
   | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
 
 /-- Look up and remove a flag by long name or short name. -/
-private def takeFlag (st : St) (long : String) (short : Option Char) :
-    Option (Option String × String) × St :=
+private
+def takeFlag
+    (st : St)
+    (long : String)
+    (short : Option Char)
+    : Option (Option String × String) × St :=
   let nameMatches (n : String) : Bool :=
     n == long || (match short with | some c => n == c.toString | none => false)
   match st.flags.findIdx? (fun (n, _, _) => nameMatches n) with
@@ -167,7 +184,12 @@ private def takeFlag (st : St) (long : String) (short : Option Char) :
 
 /-- Run a spec against the token pool. Returns `none` when this spec could not be
 satisfied; errors are accumulated in the state either way. -/
-def interp : {g : Grade} → {α : Type} → Spec g α → St → Option α × St
+def interp
+    : {g : Grade} →
+      {α : Type} →
+      Spec g α →
+      St →
+      Option α × St
   | _, _, .const a, st => (some a, st)
   | _, _, .switch l s _, st =>
     match takeFlag st l s with
@@ -231,7 +253,12 @@ def interp : {g : Grade} → {α : Type} → Spec g α → St → Option α × S
     (some acc.reverse, st)
 
 /-- Parse argv against a spec. Returns the value, or every error found. -/
-def run {g : Grade} {α : Type} (s : Spec g α) (argv : List String) : Except (List Err) α :=
+def run
+    {g : Grade}
+    {α : Type}
+    (s : Spec g α)
+    (argv : List String)
+    : Except (List Err) α :=
   -- A flag takes a value exactly when its metadata records a type name. Switches do not.
   let valued := s.toMeta.flags.filter (·.typeName.isSome)
   let takesValue (n : String) : Bool :=

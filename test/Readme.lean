@@ -30,7 +30,9 @@ def tool := Argus.group "tool"
   , Argus.cmd "test"  (Spec.map Act.test (Spec.arg "FILTER" "Name filter" Param.str))
       (description := "Run the tests") ]
   (version := some "0.1.0")
-def main (argv : List String) : IO UInt32 :=
+def main
+    (argv : List String)
+    : IO UInt32 :=
   if argv.isEmpty then
     pure 0
   else

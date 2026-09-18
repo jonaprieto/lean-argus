@@ -29,7 +29,9 @@ variable {α : Type}
 
 /-- Print help to stdout, at the real terminal width, in whatever color the environment
 allows. -/
-def printHelp (c : Command α) (choice : ColorChoice := .auto)
+def printHelp
+    (c : Command α)
+    (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin)
     (commandPath : List String := []) : IO Unit := do
   let width ← Terminal.terminalWidth
@@ -37,7 +39,9 @@ def printHelp (c : Command α) (choice : ColorChoice := .auto)
 
 /-- Print errors to stderr. Diagnostics belong on stderr so `tool 2>/dev/null` still
 works and piping stdout stays clean. -/
-def printErrors (errs : List Err) (choice : ColorChoice := .auto)
+def printErrors
+    (errs : List Err)
+    (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin) : IO Unit := do
   let stderr ← IO.getStderr
   let target ← TermColor.targetWithTty choice (← stderr.isTty)
@@ -54,14 +58,20 @@ require the command's mandatory flags to be present. On a parse failure it repor
 error and the help page, then exits `2`. Otherwise it hands the typed value to `body`.
 
 ```lean
-def main (argv : List String) : IO UInt32 :=
+def main
+    (argv : List String)
+    : IO UInt32 :=
   Argus.Term.main grepish argv fun opts => do
     IO.println s!"searching for {opts.pattern}"
     return 0
 ```
 -/
-def main (c : Command α) (argv : List String) (body : α → IO UInt32)
-    (scheme : ColorScheme := ColorScheme.catppuccin) : IO UInt32 := do
+def main
+    (c : Command α)
+    (argv : List String)
+    (body : α → IO UInt32)
+    (scheme : ColorScheme := ColorScheme.catppuccin)
+    : IO UInt32 := do
   -- `--help` is honoured wherever it appears, and reports the deepest subcommand reached:
   -- `tool build --help` documents `build`, not `tool`. Matching only `["--help"]` at the
   -- root would send it down to the child, which would reject it as an unknown flag.
