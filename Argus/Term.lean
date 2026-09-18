@@ -60,9 +60,7 @@ require the command's mandatory flags to be present. On a parse failure it repor
 error and the help page, then exits `2`. Otherwise it hands the typed value to `body`.
 
 ```lean
-def main
-    (argv : List String)
-    : IO UInt32 :=
+def main (argv : List String) : IO UInt32 :=
   Argus.Term.main grepish argv fun opts => do
     IO.println s!"searching for {opts.pattern}"
     return 0
