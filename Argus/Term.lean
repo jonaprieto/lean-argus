@@ -34,7 +34,8 @@ def printHelp
     (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin)
     (commandPath : List String := [])
-    : IO Unit := do
+    : IO Unit
+    := do
   let width ← Terminal.terminalWidth
   TermColor.print (Help.render c width scheme (includeGlobals := true) commandPath) choice
 
@@ -44,7 +45,8 @@ def printErrors
     (errs : List Err)
     (choice : ColorChoice := .auto)
     (scheme : ColorScheme := ColorScheme.catppuccin)
-    : IO Unit := do
+    : IO Unit
+    := do
   let stderr ← IO.getStderr
   let target ← TermColor.targetWithTty choice (← stderr.isTty)
   stderr.putStr (Text.render target (Help.renderErrors errs scheme))
@@ -71,7 +73,8 @@ def main
     (argv : List String)
     (body : α → IO UInt32)
     (scheme : ColorScheme := ColorScheme.catppuccin)
-    : IO UInt32 := do
+    : IO UInt32
+    := do
   -- `--help` is honoured wherever it appears, and reports the deepest subcommand reached:
   -- `tool build --help` documents `build`, not `tool`. Matching only `["--help"]` at the
   -- root would send it down to the child, which would reject it as an unknown flag.

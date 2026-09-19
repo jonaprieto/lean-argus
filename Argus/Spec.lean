@@ -73,7 +73,9 @@ structure Meta where
   args : List ArgInfo
   deriving Repr, BEq, Inhabited
 
-instance : Append Meta where
+instance
+    : Append Meta
+    where
   append a b := { flags := a.flags ++ b.flags, args := a.args ++ b.args }
 
 /-- The empty metadata; identity for `++`. -/
@@ -178,16 +180,32 @@ but a mistake like `many (opt p)` still fails to elaborate.
 @[inline] def pure' (a : α) : Spec 1 α := .const a
 
 /-- Map over a spec. -/
-@[inline] def map (f : α → β) (x : Spec g α) : Spec (1 * g) β :=
+@[inline]
+def map
+    (f : α → β)
+    (x : Spec g α)
+    : Spec (1 * g) β
+    :=
   .ap (.const f) x
 
 /-- Applicative application. -/
-@[inline] def seq (f : Spec g₁ (α → β)) (x : Spec g₂ α) : Spec (g₁ * g₂) β :=
+@[inline]
+def seq
+    (f : Spec g₁ (α → β))
+    (x : Spec g₂ α)
+    : Spec (g₁ * g₂) β
+    :=
   .ap f x
 
 /-- Lift a binary function over two specs. -/
-@[inline] def map2 {γ : Type} (f : α → β → γ) (x : Spec g₁ α) (y : Spec g₂ β) :
-    Spec (1 * g₁ * g₂) γ :=
+@[inline]
+def map2
+    {γ : Type}
+    (f : α → β → γ)
+    (x : Spec g₁ α)
+    (y : Spec g₂ β)
+    : Spec (1 * g₁ * g₂) γ
+    :=
   .ap (.ap (.const f) x) y
 
 @[inherit_doc] infixl:60 " <*> " => Spec.seq
