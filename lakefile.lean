@@ -7,7 +7,7 @@ package «argus» where
 
 -- Pinned release tag: the grade algebra and parser semantics must not move underfoot.
 require grip from git
-  "https://github.com/jonaprieto/lean-grip" @ "v0.3.6"
+  "https://github.com/jonaprieto/lean-grip" @ "v0.4.1"
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"
