@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6 — 2026-10-24
+
+- Refresh Grip to v0.4.1.
+- Lay out declarations one binder group per line.
+
 ## 0.5.5 — 2026-09-09
 
 - Refresh the terminal stack and document the contribution policy and package problem.
