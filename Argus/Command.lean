@@ -216,11 +216,11 @@ def run
         let available := children.map (·.name)
         match c.splitSubcommand argv with
         | none => .error [.missingSubcommand c.name available]
-        | some (before, given, remaining) =>
+        | some (before, sub, remaining) =>
           let dispatch := fun childArgv =>
-            match children.find? (·.name == given) with
+            match children.find? (·.name == sub) with
             | some child => go fuel child childArgv
-            | none => .error [.unknownSubcommand given (suggest available given)]
+            | none => .error [.unknownSubcommand sub (suggest available sub)]
           match c.globalOptions with
           | none => dispatch (before ++ remaining)
           | some ⟨_, spec⟩ =>

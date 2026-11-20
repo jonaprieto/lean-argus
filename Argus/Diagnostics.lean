@@ -26,7 +26,7 @@ def sourceFor
     : Source
     :=
   match err with
-  | .badValue flag given _ => Source.named s!"value for --{flag}" given
+  | .badValue flag input _ => Source.named s!"value for --{flag}" input
   | _ => Source.named "" ""
 
 private

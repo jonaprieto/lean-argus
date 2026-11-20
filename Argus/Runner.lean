@@ -31,13 +31,13 @@ namespace Argus
 
 /-- A single failure. `badValue` carries grip's positioned `ParseError`. -/
 inductive Err where
-  | unknownFlag (given : String) (didYouMean : Option String)
+  | unknownFlag (input : String) (didYouMean : Option String)
   | missingSubcommand (command : String) (available : List String)
-  | unknownSubcommand (given : String) (didYouMean : Option String)
+  | unknownSubcommand (input : String) (didYouMean : Option String)
   | missingFlag (long : String)
-  | badValue (flag : String) (given : String) (err : Grip.ParseError)
+  | badValue (flag : String) (input : String) (err : Grip.ParseError)
   | missingArg (name : String)
-  | unexpectedArg (given : String)
+  | unexpectedArg (input : String)
   | flagNeedsValue (long : String)
   | custom (msg : String)
   deriving Inhabited
@@ -54,9 +54,9 @@ def Err.message
   | .unknownSubcommand g none => s!"unknown subcommand '{g}'"
   | .unknownSubcommand g (some d) => s!"unknown subcommand '{g}'; did you mean '{d}'?"
   | .missingFlag l => s!"missing required flag '--{l}'"
-  | .badValue f given e =>
+  | .badValue f input e =>
     let expected := if e.expected.isEmpty then "" else s!"; expected {", ".intercalate e.expected}"
-    s!"invalid value '{given}' for '--{f}' at column {e.pos}{expected}"
+    s!"invalid value '{input}' for '--{f}' at column {e.pos}{expected}"
   | .missingArg n => s!"missing required argument <{n}>"
   | .unexpectedArg g => s!"unexpected argument '{g}'"
   | .flagNeedsValue l => s!"flag '--{l}' needs a value"
@@ -162,10 +162,10 @@ def editDistance
 /-- Closest known flag name, when it is close enough to be worth suggesting. -/
 def suggest
     (known : List String)
-    (given : String)
+    (input : String)
     : Option String
     :=
-  let scored := known.map (fun k => (editDistance k given, k))
+  let scored := known.map (fun k => (editDistance k input, k))
   match scored.foldl (fun best c => if c.1 < best.1 then c else best) (999, "") with
   | (d, k) => if d ≤ 2 && k ≠ "" then some k else none
 
