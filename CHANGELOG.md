@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.7 — 2026-11-20
+
+- Adopt Lean v4.36.0 and refresh Grip to v0.4.3.
+- Breaking: `given` is a keyword in Lean 4.36, so the `Err` constructor fields named `given`
+  are now `input`.
+
 ## 0.5.6 — 2026-10-24
 
 - Refresh Grip to v0.4.1.
