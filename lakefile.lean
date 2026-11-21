@@ -11,21 +11,21 @@ require grip from git
 
 require «termcolor» from git
   "https://github.com/jonaprieto/lean-termcolor.git"
-  @ "v1.1.7"
+  @ "v1.1.8"
 
 require «termcolor-layout» from git
   "https://github.com/jonaprieto/lean-termcolor-layout.git"
-  @ "v0.1.15"
+  @ "v0.1.16"
 
 require «termcolor-diagnostics» from git
   "https://github.com/jonaprieto/lean-termcolor-diagnostics.git"
-  @ "v0.1.18"
+  @ "v0.1.19"
 
 -- Only `Argus.Term` needs this. Listed here because Lake has no per-library requires;
 -- the layering is enforced by the module lists below, not by the dependency set.
 require «termcolor-terminal» from git
   "https://github.com/jonaprieto/lean-termcolor-terminal.git"
-  @ "v0.3.8"
+  @ "v0.3.9"
 
 /-- The pure library. Deps: grip, termcolor, termcolor-layout. Listed explicitly rather
 than globbed so that adding a module cannot silently widen what a consumer links. -/
